@@ -6408,6 +6408,7 @@ class TauTuiApp(App[None]):
             ),
             callback=self._handle_scoped_models_picker_result,
         )
+        self.run_worker(self._refresh_open_model_picker(), exclusive=False)
 
     def _toggle_scoped_model(self, choice: ModelChoice) -> Sequence[ModelChoice]:
         toggle_scoped_model = getattr(self.session, "toggle_scoped_model", None)
