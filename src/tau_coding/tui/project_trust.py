@@ -1,4 +1,7 @@
-"""Accessible Textual adapter for Tau-owned project-trust requests."""
+"""Accessible Textual adapter for Tau-owned project-trust requests.
+
+用于 Tau 所拥有项目信任请求的无障碍 Textual 适配器。
+"""
 
 from __future__ import annotations
 
@@ -24,7 +27,10 @@ _LABELS: tuple[tuple[TrustChoice, str], ...] = (
 
 
 class ProjectTrustScreen(ModalScreen[TrustChoice | None]):
-    """Tau-style modal picker rendering one policy-owned request."""
+    """Tau-style modal picker rendering one policy-owned request.
+
+    渲染一个策略所拥有请求的 Tau 风格模态选择器。
+    """
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape", "cancel", "Cancel"),
@@ -91,11 +97,19 @@ class ProjectTrustScreen(ModalScreen[TrustChoice | None]):
         *,
         cancel_action: str = "cancels",
     ) -> None:
+        """Initialize the modal from a trust request and cancel wording.
+
+        使用信任请求和取消动作文本初始化模态框。
+        """
         super().__init__()
         self.request = request
         self.cancel_action = cancel_action
 
     def compose(self) -> ComposeResult:
+        """Compose the trust summary and explicit decision choices.
+
+        组合信任摘要和明确的决策选项。
+        """
         categories = ", ".join(
             f"{category} ({self.request.resources.counts[category]})"
             for category in self.request.resources.categories
@@ -129,13 +143,19 @@ class ProjectTrustScreen(ModalScreen[TrustChoice | None]):
             )
 
     def on_mount(self) -> None:
-        """Focus the first safe, explicit action for keyboard users."""
+        """Focus the first safe, explicit action for keyboard users.
+
+        为键盘用户聚焦第一个安全且明确的动作。
+        """
         choices = self.query_one("#project-trust-list", ListView)
         choices.index = 0
         choices.focus()
 
     def on_key(self, event: Key) -> None:
-        """Keep navigation local when hosted by Tau's globally bound app."""
+        """Keep navigation local when hosted by Tau's globally bound app.
+
+        在由 Tau 全局绑定应用承载时，将导航保持在本地。
+        """
         if event.key == "up":
             event.stop()
             self.action_cursor_up()
@@ -147,25 +167,53 @@ class ProjectTrustScreen(ModalScreen[TrustChoice | None]):
             self.action_select_cursor()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Dismiss the modal with the selected trust choice.
+
+        使用选定的信任选项关闭模态框。
+        """
         choice = event.item.name
         if choice is not None:
             self.dismiss(choice)  # type: ignore[arg-type]
 
     def action_cursor_up(self) -> None:
+        """Move the trust-choice cursor upward.
+
+        向上移动信任选项光标。
+        """
         self.query_one("#project-trust-list", ListView).action_cursor_up()
 
     def action_cursor_down(self) -> None:
+        """Move the trust-choice cursor downward.
+
+        向下移动信任选项光标。
+        """
         self.query_one("#project-trust-list", ListView).action_cursor_down()
 
     def action_select_cursor(self) -> None:
+        """Select the trust choice under the cursor.
+
+        选择光标所在的信任选项。
+        """
         self.query_one("#project-trust-list", ListView).action_select_cursor()
 
     def action_cancel(self) -> None:
+        """Dismiss the modal without selecting a trust choice.
+
+        不选择信任选项并关闭模态框。
+        """
         self.dismiss(None)
 
 
 class _ProjectTrustApp(App[TrustChoice | None]):
+    """Standalone Textual host for a project-trust prompt.
+
+    项目信任提示的独立 Textual 宿主。
+    """
     def __init__(self, request: ProjectTrustRequest) -> None:
+        """Configure the standalone app with Tau's theme and trust request.
+
+        使用 Tau 主题和信任请求配置独立应用。
+        """
         super().__init__()
         tau_dark = textual_theme_for_tui_theme(TAU_DARK_THEME.name)
         self.register_theme(tau_dark)
@@ -173,6 +221,10 @@ class _ProjectTrustApp(App[TrustChoice | None]):
         self.request = request
 
     def on_mount(self) -> None:
+        """Present the trust screen when the standalone app mounts.
+
+        独立应用挂载时显示信任屏幕。
+        """
         self.push_screen(
             ProjectTrustScreen(self.request, cancel_action="exits Tau"),
             self.exit,
@@ -180,5 +232,8 @@ class _ProjectTrustApp(App[TrustChoice | None]):
 
 
 async def prompt_project_trust(request: ProjectTrustRequest) -> TrustChoice | None:
-    """Run the frontend adapter and return the Tau policy choice."""
+    """Run the frontend adapter and return the Tau policy choice.
+
+    运行前端适配器并返回 Tau 策略选项。
+    """
     return await _ProjectTrustApp(request).run_async()

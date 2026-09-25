@@ -1,4 +1,7 @@
-"""Install Tau extensions from local paths or Git repositories."""
+"""Install Tau extensions from local paths or Git repositories.
+
+从本地路径或 Git 仓库安装 Tau 扩展。
+"""
 
 from __future__ import annotations
 
@@ -19,12 +22,18 @@ CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 class ExtensionInstallError(RuntimeError):
-    """Raised when an extension source cannot be installed safely."""
+    """Raised when an extension source cannot be installed safely.
+
+    扩展源无法安全安装时抛出的异常。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class GitExtensionSource:
-    """A normalized Git repository source and optional checkout ref."""
+    """A normalized Git repository source and optional checkout ref.
+
+    规范化的 Git 仓库源及可选的检出引用。
+    """
 
     url: str
     ref: str | None
@@ -40,9 +49,14 @@ def install_extension(
 ) -> Path:
     """Install one extension into Tau's user extension directory.
 
+    将一个扩展安装到 Tau 的用户扩展目录。
+
     Local Python files are copied. Local package directories and Git
     repositories must expose ``extension.py`` or ``[tool.tau].extensions`` so
     the normal user-directory discovery path can load them on the next run.
+
+    本地 Python 文件会被复制。本地包目录和 Git 仓库必须提供 ``extension.py``
+    或 ``[tool.tau].extensions``，以便普通用户目录发现路径在下次运行时加载它们。
     """
     destination_root = extensions_dir or TauPaths().user_extensions_dir
     staging_root: Path | None = None
@@ -62,6 +76,9 @@ def install_extension(
         # Reproduce the exact <Tau home>/extensions/<name> shape during validation.
         # This catches layouts that explicit -e discovery accepts but normal
         # user-directory discovery would skip, such as nested/extension.py.
+        # 校验时复现精确的 <Tau home>/extensions/<name> 目录结构。
+        # 这样可捕获显式 -e 发现会接受、但普通用户目录发现会跳过的布局，
+        # 例如 nested/extension.py。
         staging_root = Path(mkdtemp(prefix=".extension-install-", dir=destination_root))
         staging = staging_root / "extensions" / name
         staging.parent.mkdir()
@@ -86,7 +103,10 @@ def install_extension(
 
 
 def parse_git_extension_source(source: str) -> GitExtensionSource:
-    """Normalize a Pi-style Git source accepted by ``tau install``."""
+    """Normalize a Pi-style Git source accepted by ``tau install``.
+
+    规范化 ``tau install`` 接受的 Pi 风格 Git 源。
+    """
     raw = source[4:] if source.startswith("git:") else source
     if not raw:
         raise ExtensionInstallError("Git extension source is empty")
@@ -121,6 +141,10 @@ def _clone_git_source(
     *,
     command_runner: CommandRunner,
 ) -> None:
+    """Clone a Git extension source into a staging directory.
+
+    将 Git 扩展源克隆到暂存目录。
+    """
     result = command_runner(
         ["git", "clone", "--", source.url, str(destination)],
         capture_output=True,
@@ -144,6 +168,10 @@ def _clone_git_source(
 
 
 def _local_install_name(source: Path) -> str:
+    """Derive a safe installation name from a local source path.
+
+    从本地源路径派生安全的安装名称。
+    """
     if source.is_file() and source.suffix != ".py":
         raise ExtensionInstallError("a local extension file must have a .py suffix")
     name = source.name
@@ -152,11 +180,19 @@ def _local_install_name(source: Path) -> str:
 
 
 def _validate_install_name(name: str) -> None:
+    """Reject extension names that are unsafe as destination path components.
+
+    拒绝不适合作为目标路径组件的扩展名称。
+    """
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", name) or name in {".", ".."}:
         raise ExtensionInstallError(f"extension source has an unsupported install name: {name!r}")
 
 
 def _validate_staged_extension(staging_root: Path) -> None:
+    """Ensure staged content exposes at least one discoverable extension.
+
+    确保暂存内容至少提供一个可发现的扩展。
+    """
     paths = TauResourcePaths(root=staging_root, cwd=Path.cwd())
     discovered, diagnostics = discover_extensions(paths)
     errors = [diagnostic.message for diagnostic in diagnostics if diagnostic.severity == "error"]
@@ -170,6 +206,10 @@ def _validate_staged_extension(staging_root: Path) -> None:
 
 
 def _publish_staged_extension(staging: Path, destination: Path, *, force: bool) -> None:
+    """Publish staged content, replacing the destination when allowed.
+
+    发布暂存内容，并在允许时替换目标。
+    """
     if destination.exists() or destination.is_symlink():
         if not force:
             raise ExtensionInstallError(
@@ -189,11 +229,19 @@ def _publish_staged_extension(staging: Path, destination: Path, *, force: bool) 
 
 
 def _local_copy_ignore(_directory: str, names: Sequence[str]) -> set[str]:
+    """Return development artifacts to ignore while copying a local extension.
+
+    返回复制本地扩展时应忽略的开发产物。
+    """
     ignored = {".git", ".hg", ".svn", ".venv", "__pycache__", ".pytest_cache", ".mypy_cache"}
     return ignored.intersection(names)
 
 
 def _remove_path(path: Path) -> None:
+    """Remove one file, symlink, or directory at a validated extension path.
+
+    移除已校验扩展路径上的文件、符号链接或目录。
+    """
     if path.is_symlink() or path.is_file():
         path.unlink(missing_ok=True)
     elif path.is_dir():

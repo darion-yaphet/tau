@@ -1,4 +1,7 @@
-"""Trusted built-in llama.cpp local backend."""
+"""Trusted built-in llama.cpp local backend.
+
+可信的内置 llama.cpp 本地后端。
+"""
 
 from __future__ import annotations
 
@@ -42,7 +45,10 @@ def setup(
     tau: ExtensionAPI,
     context: BuiltInExtensionContext | None = None,
 ) -> None:
-    """Register the trusted provider and provider-neutral local backend."""
+    """Register the trusted provider and provider-neutral local backend.
+
+    注册可信提供商和提供商无关的本地后端。
+    """
     dependencies = context or BuiltInExtensionContext(
         paths=TauPaths(),
         credential_store=FileCredentialStore(credentials_path(TauPaths())),

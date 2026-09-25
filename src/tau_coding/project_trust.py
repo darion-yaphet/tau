@@ -1,7 +1,12 @@
 """Project-input trust policy, detection, persistence, and coordination.
 
+项目输入信任策略、检测、持久化与协调。
+
 Project trust controls ambient project resources. It is deliberately not a
 filesystem, process, network, tool, model, or prompt-injection sandbox.
+
+项目信任控制环境中的项目资源。它并非文件系统、进程、网络、工具、模型或提示注入
+沙箱。
 """
 
 from __future__ import annotations
@@ -39,19 +44,28 @@ _RESOURCE_CATEGORIES = (
 
 
 class ProjectTrustError(RuntimeError):
-    """A trust path, store, or persistence operation failed safely."""
+    """A trust path, store, or persistence operation failed safely.
+
+    信任路径、存储或持久化操作安全失败时抛出的异常。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class CanonicalProjectPath:
-    """An existing, canonical project working directory."""
+    """An existing, canonical project working directory.
+
+    已存在的规范项目工作目录。
+    """
 
     value: Path
 
 
 @dataclass(frozen=True, slots=True)
 class ProtectedResourceSummary:
-    """Bounded metadata-only summary of protected project inputs."""
+    """Bounded metadata-only summary of protected project inputs.
+
+    受保护项目输入的有界纯元数据摘要。
+    """
 
     cwd: CanonicalProjectPath
     categories: tuple[str, ...]
@@ -60,12 +74,19 @@ class ProtectedResourceSummary:
 
     @property
     def total(self) -> int:
+        """Return the total number of detected protected resources.
+
+        返回检测到的受保护资源总数。
+        """
         return sum(self.counts.values())
 
 
 @dataclass(frozen=True, slots=True)
 class SavedTrustEntry:
-    """A validated saved exact or inherited decision."""
+    """A validated saved exact or inherited decision.
+
+    已校验并保存的精确或继承决策。
+    """
 
     path: CanonicalProjectPath
     decision: TrustDecision
@@ -73,7 +94,10 @@ class SavedTrustEntry:
 
 @dataclass(frozen=True, slots=True)
 class ProjectTrustRequest:
-    """Frontend-neutral request for an interactive trust decision."""
+    """Frontend-neutral request for an interactive trust decision.
+
+    用于交互式信任决策的前端无关请求。
+    """
 
     cwd: CanonicalProjectPath
     resources: ProtectedResourceSummary
@@ -89,7 +113,10 @@ class ProjectTrustRequest:
 
 @dataclass(frozen=True, slots=True)
 class ProjectTrustResolution:
-    """Completed decision for one canonical cwd."""
+    """Completed decision for one canonical cwd.
+
+    一个规范工作目录的已完成决策。
+    """
 
     trusted: bool
     source: TrustSource
@@ -98,12 +125,16 @@ class ProjectTrustResolution:
     had_candidates: bool = True
     cancelled: bool = False
     # True when staged preparation deferred the durable trust-store write.
+    # 暂存准备延迟持久信任存储写入时为 True。
     needs_persistence: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class ExtensionTrustResult:
-    """Result returned by an eligible pre-trust extension."""
+    """Result returned by an eligible pre-trust extension.
+
+    符合条件的信任前扩展返回的结果。
+    """
 
     decision: Literal["approve", "decline", "defer"] = "defer"
     remember: bool = False
@@ -111,7 +142,10 @@ class ExtensionTrustResult:
 
 @dataclass(frozen=True, slots=True)
 class ProjectTrustEvent:
-    """Content-free payload sent to eligible pre-trust extensions."""
+    """Content-free payload sent to eligible pre-trust extensions.
+
+    发送给符合条件的信任前扩展的不含内容载荷。
+    """
 
     cwd: Path
     mode: Literal["interactive", "headless"]
@@ -126,7 +160,10 @@ ExtensionDecider = Callable[[ProjectTrustEvent], Awaitable[ExtensionTrustResult 
 
 
 def _darwin_filesystem_path(path: Path) -> Path:
-    """Return macOS's case-preserving path for an existing filesystem object."""
+    """Return macOS's case-preserving path for an existing filesystem object.
+
+    返回 macOS 为现有文件系统对象保留大小写的路径。
+    """
     import fcntl
 
     descriptor = os.open(path, os.O_RDONLY)
@@ -141,7 +178,10 @@ def _darwin_filesystem_path(path: Path) -> Path:
 
 
 def canonicalize_project_path(path: Path, *, base: Path | None = None) -> CanonicalProjectPath:
-    """Strictly canonicalize an existing destination cwd."""
+    """Strictly canonicalize an existing destination cwd.
+
+    严格规范化现有目标工作目录。
+    """
     expanded = path.expanduser()
     if not expanded.is_absolute():
         if base is None:
@@ -161,6 +201,9 @@ def canonicalize_project_path(path: Path, *, base: Path | None = None) -> Canoni
             # filesystem for its case-preserving spelling, so aliases on a
             # case-insensitive volume share a key without collapsing distinct
             # paths on a case-sensitive volume.
+            # normcase() 在 Darwin 上不执行操作。F_GETPATH 向挂载的文件系统查询其
+            # 保留大小写的拼写，因此不区分大小写卷上的别名共享键，同时不会合并
+            # 区分大小写卷上的不同路径。
             resolved = _darwin_filesystem_path(resolved)
     except (OSError, UnicodeError) as exc:
         raise ProjectTrustError(
@@ -170,16 +213,28 @@ def canonicalize_project_path(path: Path, *, base: Path | None = None) -> Canoni
 
 
 class ProtectedResourceDetector:
-    """Detect protected candidates using names and file metadata only."""
+    """Detect protected candidates using names and file metadata only.
+
+    仅使用名称和文件元数据检测受保护候选项。
+    """
 
     def __init__(self, *, max_sample_paths: int = 12) -> None:
+        """Configure the maximum number of diagnostic sample paths.
+
+        配置诊断样本路径的最大数量。
+        """
         self.max_sample_paths = max_sample_paths
 
     def detect(self, cwd: CanonicalProjectPath) -> ProtectedResourceSummary:
+        """Scan one canonical project for protected resource metadata.
+
+        扫描一个规范项目的受保护资源元数据。
+        """
         root = cwd.value
         found: dict[str, list[Path]] = {category: [] for category in _RESOURCE_CATEGORIES}
         # Project settings are not supported by a Tau loader, so they cannot
         # trigger trust until that loader exists.
+        # Tau 加载器尚不支持项目设置，因此在该加载器存在前，它们不能触发信任检查。
         for namespace in (".tau", ".agents"):
             self._glob(
                 found,
@@ -215,12 +270,20 @@ class ProtectedResourceDetector:
 
     @staticmethod
     def _is_candidate(path: Path) -> bool:
+        """Return whether a path exists or is an unreadable protected candidate.
+
+        返回路径是否存在，或是否为不可读取的受保护候选项。
+        """
         try:
             return path.is_file() or path.is_symlink()
         except OSError:
             return True
 
     def _file(self, found: dict[str, list[Path]], category: str, path: Path) -> None:
+        """Record one protected file candidate under its category.
+
+        在对应类别下记录一个受保护文件候选项。
+        """
         if self._is_candidate(path):
             found[category].append(path)
 
@@ -233,10 +296,15 @@ class ProtectedResourceDetector:
         *,
         predicate: Callable[[Path], bool] | None = None,
     ) -> None:
+        """Record protected paths matching one bounded glob pattern.
+
+        记录匹配一个有界 glob 模式的受保护路径。
+        """
         try:
             entries = tuple(directory.glob(pattern)) if directory.is_dir() else ()
         except OSError:
             # An unreadable protected directory is itself a meaningful trigger.
+            # 不可读取的受保护目录本身就是有意义的触发条件。
             found[category].append(directory)
             return
         found[category].extend(
@@ -248,6 +316,8 @@ class ProtectedResourceDetector:
     def _context(self, found: dict[str, list[Path]], cwd: Path) -> None:
         # Match current Tau discovery: nearest project marker through cwd, then
         # cwd-local namespace context files.
+        # 匹配当前 Tau 发现逻辑：先查找直到 cwd 的最近项目标记，再查找 cwd 本地命名空间
+        # 上下文文件。
         markers = (".git", "pyproject.toml", "uv.lock", "setup.py", "package.json")
         project_root = cwd
         for candidate in (cwd, *cwd.parents):
@@ -267,6 +337,10 @@ class ProtectedResourceDetector:
         self._file(found, "context", cwd / ".agents" / "AGENTS.md")
 
     def _extensions(self, found: dict[str, list[Path]], directory: Path) -> None:
+        """Record extension entrypoints and declared extension packages.
+
+        记录扩展入口点和声明的扩展包。
+        """
         try:
             entries = tuple(directory.iterdir()) if directory.is_dir() else ()
         except OSError:
@@ -283,15 +357,26 @@ class ProtectedResourceDetector:
 
 
 class ProjectTrustStore:
-    """Versioned, locked, atomically replaced trust decision store."""
+    """Versioned, locked, atomically replaced trust decision store.
+
+    带版本、加锁并以原子方式替换的信任决策存储。
+    """
 
     def __init__(self, paths: TauPaths | None = None) -> None:
+        """Initialize trust-store paths from Tau filesystem settings.
+
+        根据 Tau 文件系统设置初始化信任存储路径。
+        """
         self.paths = paths or TauPaths()
         self.path = self.paths.home / "trust.json"
         self.lock_path = self.paths.home / "trust.json.lock"
         self.pending_path = self.paths.home / "trust.json.pending"
 
     def nearest(self, cwd: CanonicalProjectPath) -> SavedTrustEntry | None:
+        """Return the nearest exact or inherited saved trust decision.
+
+        返回最近的精确或继承的已保存信任决策。
+        """
         decisions = self.read()
         current = cwd.value
         while True:
@@ -303,16 +388,28 @@ class ProjectTrustStore:
             current = current.parent
 
     def read(self) -> dict[Path, TrustDecision]:
+        """Read all saved trust decisions under the store lock.
+
+        在存储锁下读取所有已保存的信任决策。
+        """
         with self._locked():
             return self._read_unlocked()
 
     def set(self, path: CanonicalProjectPath, decision: TrustDecision) -> None:
+        """Persist one exact trust decision.
+
+        持久化一个精确信任决策。
+        """
         with self._locked():
             decisions = self._read_unlocked()
             decisions[path.value] = decision
             self._write_unlocked(decisions)
 
     def trust_parent(self, cwd: CanonicalProjectPath) -> CanonicalProjectPath:
+        """Persist trust for the canonical parent of a project directory.
+
+        为项目目录的规范父目录持久化信任。
+        """
         parent = CanonicalProjectPath(cwd.value.parent)
         with self._locked():
             decisions = self._read_unlocked()
@@ -322,6 +419,10 @@ class ProjectTrustStore:
         return parent
 
     def remove(self, path: CanonicalProjectPath) -> None:
+        """Remove one saved trust decision.
+
+        移除一个已保存的信任决策。
+        """
         with self._locked():
             decisions = self._read_unlocked()
             decisions.pop(path.value, None)
@@ -329,6 +430,10 @@ class ProjectTrustStore:
 
     @contextmanager
     def _locked(self) -> Iterator[None]:
+        """Hold the cross-process trust-store lock for one operation.
+
+        在一次操作期间持有跨进程信任存储锁。
+        """
         try:
             self.paths.home.mkdir(mode=0o700, parents=True, exist_ok=True)
             with self.lock_path.open("a+b") as handle:
@@ -351,6 +456,9 @@ class ProjectTrustStore:
         # a grant or a revocation: either direction could resurrect trust.
         # Recovery is attempted only by the writer that observed its own
         # failure; a journal left by a crash remains visibly fail-closed.
+        # 待处理日志表示更新未到达提交点。普通读取绝不能猜测中断操作是授权还是撤销，
+        # 因为任一方向都可能恢复信任。恢复仅由观察到自身失败的写入方尝试；崩溃遗留的
+        # 日志保持可见的故障关闭状态。
         if self.pending_path.exists():
             raise ProjectTrustError(
                 f"Project trust store {self.path} has an incomplete update; "
@@ -397,6 +505,10 @@ class ProjectTrustStore:
         return result
 
     def _write_unlocked(self, decisions: Mapping[Path, TrustDecision]) -> None:
+        """Write trust decisions with a fail-closed recovery journal.
+
+        使用故障关闭恢复日志写入信任决策。
+        """
         payload = {
             "version": 1,
             "decisions": [
@@ -410,6 +522,8 @@ class ProjectTrustStore:
         # Persist a fail-closed undo journal before touching trust.json. Readers
         # reject the store while this marker exists, so even failed recovery can
         # never expose a newly granting destination.
+        # 在修改 trust.json 前持久化故障关闭撤销日志。该标记存在时读取方会拒绝存储，
+        # 因此即使恢复失败，也绝不会暴露新授权的目标。
         journal = (b"present\n" + prior_bytes) if prior_bytes is not None else b"absent\n"
         try:
             self._atomic_replace(self.pending_path, journal, prefix=".trust-pending-")
@@ -423,6 +537,7 @@ class ProjectTrustStore:
 
         # The destination and its directory entry are durable. Failure to clear
         # the journal is still a failed update and must restore the prior state.
+        # 目标及其目录项已经持久。清除日志失败仍属于更新失败，必须恢复先前状态。
         try:
             self.pending_path.unlink()
         except OSError as exc:
@@ -434,10 +549,16 @@ class ProjectTrustStore:
         # Journal cleanup is not part of the data commit. If this fsync fails,
         # either the deletion persists (the durable destination grants) or the
         # journal reappears after a crash (reads fail closed).
+        # 日志清理不属于数据提交。如果此 fsync 失败，要么删除已持久化（持久目标授权），
+        # 要么日志在崩溃后重新出现（读取故障关闭）。
         with suppress(OSError):
             _fsync_directory(self.paths.home)
 
     def _atomic_replace(self, destination: Path, data: bytes, *, prefix: str) -> None:
+        """Atomically replace a trust-store file and sync its directory.
+
+        原子替换信任存储文件并同步其目录。
+        """
         fd = -1
         temporary: Path | None = None
         try:
@@ -460,7 +581,10 @@ class ProjectTrustStore:
                     temporary.unlink(missing_ok=True)
 
     def _recover_unlocked(self) -> OSError | None:
-        """Restore the journaled state; retain the marker on every failure."""
+        """Restore the journaled state; retain the marker on every failure.
+
+        恢复日志记录的状态；任何失败都保留标记。
+        """
         if not self.pending_path.exists():
             return None
         try:
@@ -482,11 +606,18 @@ class ProjectTrustStore:
 
 
 class ProjectTrustCoordinator:
-    """Resolve and cache trust outcomes per canonical cwd for one invocation."""
+    """Resolve and cache trust outcomes per canonical cwd for one invocation.
+
+    在一次调用中按规范工作目录解析并缓存信任结果。
+    """
 
     def __init__(
         self, store: ProjectTrustStore, detector: ProtectedResourceDetector | None = None
     ) -> None:
+        """Initialize trust coordination with a store and protected-input detector.
+
+        使用存储和受保护输入检测器初始化信任协调。
+        """
         self.store = store
         self.detector = detector or ProtectedResourceDetector()
         self._cache: dict[Path, ProjectTrustResolution] = {}
@@ -504,10 +635,18 @@ class ProjectTrustCoordinator:
         cache_result: bool = True,
         persist: bool = True,
     ) -> tuple[ProtectedResourceSummary, ProjectTrustResolution]:
+        """Resolve project trust from saved, default, extension, or user decisions.
+
+        从已保存、默认、扩展或用户决策解析项目信任。
+        """
         canonical = canonicalize_project_path(cwd, base=Path.cwd())
         summary = self.detector.detect(canonical)
 
         def finish(result: ProjectTrustResolution) -> ProjectTrustResolution:
+            """Cache and return one completed trust resolution.
+
+            缓存并返回一个已完成的信任解析结果。
+            """
             if cache_result:
                 self._cache[canonical.value] = result
             return result
@@ -633,11 +772,16 @@ class ProjectTrustCoordinator:
         return summary, finish(result)
 
     def commit(self, cwd: CanonicalProjectPath, result: ProjectTrustResolution) -> None:
-        """Publish a staged resolution after its candidate is adopted."""
+        """Publish a staged resolution after its candidate is adopted.
+
+        候选项被采用后发布暂存的解析结果。
+        """
         if result.needs_persistence and result.saved_path is not None:
             # A store failure cannot undo an already adopted run.  The write is
             # intentionally fail-closed: the next process asks again rather
             # than accidentally treating an uncommitted grant as durable.
+            # 存储失败无法撤销已采用的运行。写入有意采用故障关闭：下一个进程会再次询问，
+            # 而不会错误地把未提交授权视为持久授权。
             with suppress(ProjectTrustError):
                 self.store.set(
                     result.saved_path,
@@ -649,7 +793,10 @@ class ProjectTrustCoordinator:
 def format_trust_diagnostic(
     summary: ProtectedResourceSummary, resolution: ProjectTrustResolution
 ) -> str:
-    """Return one bounded, content-free decision diagnostic."""
+    """Return one bounded, content-free decision diagnostic.
+
+    返回一个有界且不含内容的决策诊断。
+    """
     categories = (
         ", ".join(f"{category}={summary.counts[category]}" for category in summary.categories)
         or "none"
@@ -664,6 +811,10 @@ def format_trust_diagnostic(
 
 
 def _lock(handle: IO[bytes]) -> None:
+    """Acquire an exclusive platform-specific file lock.
+
+    获取平台专用的排他文件锁。
+    """
     try:
         if os.name == "nt":
             import msvcrt
@@ -679,6 +830,10 @@ def _lock(handle: IO[bytes]) -> None:
 
 
 def _unlock(handle: IO[bytes]) -> None:
+    """Release a platform-specific file lock.
+
+    释放平台专用文件锁。
+    """
     try:
         if os.name == "nt":
             import msvcrt
@@ -694,6 +849,10 @@ def _unlock(handle: IO[bytes]) -> None:
 
 
 def _fsync_directory(directory: Path) -> None:
+    """Synchronize a directory entry when supported by the platform.
+
+    在平台支持时同步目录项。
+    """
     if os.name == "nt":
         return
     descriptor = os.open(directory, os.O_RDONLY)

@@ -1,4 +1,7 @@
-"""Slash command registry for Tau coding sessions."""
+"""Slash command registry for Tau coding sessions.
+
+Tau 编码会话的斜杠命令注册表。
+"""
 
 from __future__ import annotations
 
@@ -33,78 +36,153 @@ LOGIN_PROVIDER_ALIASES = {
 
 
 class CommandSession(Protocol):
-    """Session attributes available to slash-command handlers."""
+    """Session attributes available to slash-command handlers.
+
+    斜杠命令处理器可访问的会话属性。
+    """
 
     @property
+    # Return the session working directory.
+    #
+    # 返回会话工作目录。
     def cwd(self) -> Path: ...
 
     @property
+    # Return the active model name.
+    #
+    # 返回活动模型名称。
     def model(self) -> str: ...
 
     @property
+    # Return the active provider name.
+    #
+    # 返回活动提供者名称。
     def provider_name(self) -> str: ...
 
     @property
+    # Return models available from the active provider.
+    #
+    # 返回活动提供者可用的模型。
     def available_models(self) -> Sequence[str]: ...
 
     @property
+    # Return providers available to the session.
+    #
+    # 返回会话可用的提供者。
     def available_providers(self) -> Sequence[str]: ...
 
     @property
+    # Return tools exposed to the agent.
+    #
+    # 返回向代理公开的工具。
     def tools(self) -> Sequence[AgentTool]: ...
 
     @property
+    # Return loaded skills.
+    #
+    # 返回已加载的技能。
     def skills(self) -> Sequence[Skill]: ...
 
     @property
+    # Return loaded prompt templates.
+    #
+    # 返回已加载的提示词模板。
     def prompt_templates(self) -> Sequence[PromptTemplate]: ...
 
     @property
+    # Return active project context files.
+    #
+    # 返回活动项目上下文文件。
     def context_files(self) -> Sequence[ProjectContextFile]: ...
 
     @property
+    # Return the current context token estimate.
+    #
+    # 返回当前上下文令牌估算值。
     def context_token_estimate(self) -> int: ...
 
     @property
+    # Return the automatic compaction threshold.
+    #
+    # 返回自动压缩阈值。
     def auto_compact_token_threshold(self) -> int | None: ...
 
     @property
+    # Return the active context window size.
+    #
+    # 返回活动上下文窗口大小。
     def context_window_tokens(self) -> int: ...
 
     @property
+    # Return the active thinking level.
+    #
+    # 返回活动思考等级。
     def thinking_level(self) -> str: ...
 
     @property
+    # Return thinking levels supported by the active model.
+    #
+    # 返回活动模型支持的思考等级。
     def available_thinking_levels(self) -> Sequence[str]: ...
 
     @property
+    # Return resource discovery diagnostics.
+    #
+    # 返回资源发现诊断信息。
     def resource_diagnostics(self) -> Sequence[ResourceDiagnostic]: ...
 
     @property
+    # Return the effective system prompt.
+    #
+    # 返回有效系统提示词。
     def system_prompt(self) -> str: ...
 
     @property
+    # Return the effective prompt with source attribution.
+    #
+    # 返回带来源标注的有效提示词。
     def system_prompt_inspection(self) -> SystemPromptInspection: ...
 
     @property
+    # Return the durable session id when indexed.
+    #
+    # 返回已索引会话的持久标识符。
     def session_id(self) -> str | None: ...
 
     @property
+    # Return the indexed session title when named.
+    #
+    # 返回已命名会话的索引标题。
     def session_title(self) -> str | None: ...
 
     @property
+    # Return the session manager when available.
+    #
+    # 返回可用的会话管理器。
     def session_manager(self) -> SessionManager | None: ...
 
+    # Ensure the current session has a durable index record.
+    #
+    # 确保当前会话具有持久化索引记录。
     def ensure_session_indexed(self) -> None: ...
 
+    # Change the active model used by future turns.
+    #
+    # 更改后续轮次使用的活动模型。
     def set_model(self, model: str) -> None: ...
 
+    # Reload durable provider settings.
+    #
+    # 重新加载持久化提供者设置。
     def reload_provider_settings(self) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
 class CommandResult:
-    """Result of handling a coding-session slash command."""
+    """Result of handling a coding-session slash command.
+
+    处理编码会话斜杠命令的结果。
+    """
 
     handled: bool
     exit_requested: bool = False
@@ -143,7 +221,10 @@ class CommandResult:
 
 @dataclass(frozen=True, slots=True)
 class CommandContext:
-    """Runtime context passed to slash-command handlers."""
+    """Runtime context passed to slash-command handlers.
+
+    传给斜杠命令处理器的运行时上下文。
+    """
 
     session: CommandSession
     registry: CommandRegistry
@@ -157,7 +238,10 @@ CommandHandler = Callable[[CommandContext], CommandResult]
 
 @dataclass(frozen=True, slots=True)
 class SlashCommand:
-    """A registered slash command and its user-facing metadata."""
+    """A registered slash command and its user-facing metadata.
+
+    已注册的斜杠命令及其面向用户的元数据。
+    """
 
     name: str
     description: str
@@ -168,14 +252,24 @@ class SlashCommand:
 
 
 class CommandRegistry:
-    """Parse, register, list, and execute slash commands."""
+    """Parse, register, list, and execute slash commands.
+
+    解析、注册、列出并执行斜杠命令。
+    """
 
     def __init__(self) -> None:
+        """Initialize an empty slash-command registry.
+
+        初始化空的斜杠命令注册表。
+        """
         self._commands: dict[str, SlashCommand] = {}
         self._aliases: dict[str, str] = {}
 
     def register(self, command: SlashCommand) -> None:
-        """Register a slash command and its aliases."""
+        """Register a slash command and its aliases.
+
+        注册一个斜杠命令及其别名。
+        """
         name = _normalize_name(command.name)
         if name in self._commands:
             raise ValueError(f"Duplicate slash command: /{name}")
@@ -187,17 +281,26 @@ class CommandRegistry:
             self._aliases[normalized_alias] = name
 
     def get(self, name: str) -> SlashCommand | None:
-        """Return a command by name or alias."""
+        """Return a command by name or alias.
+
+        按名称或别名返回命令。
+        """
         normalized = _normalize_name(name)
         command_name = self._aliases.get(normalized, normalized)
         return self._commands.get(command_name)
 
     def list_commands(self) -> tuple[SlashCommand, ...]:
-        """Return registered commands sorted by name."""
+        """Return registered commands sorted by name.
+
+        返回按名称排序的已注册命令。
+        """
         return tuple(self._commands[name] for name in sorted(self._commands))
 
     def execute(self, session: CommandSession, text: str) -> CommandResult:
-        """Execute a slash command, or return unhandled for ordinary prompts."""
+        """Execute a slash command, or return unhandled for ordinary prompts.
+
+        执行斜杠命令；对于普通提示词则返回未处理结果。
+        """
         stripped = text.strip()
         if not stripped.startswith("/"):
             return CommandResult(handled=False)
@@ -223,7 +326,10 @@ class CommandRegistry:
 
 
 def create_default_command_registry() -> CommandRegistry:
-    """Create Tau's built-in slash command registry."""
+    """Create Tau's built-in slash command registry.
+
+    创建 Tau 的内置斜杠命令注册表。
+    """
     registry = CommandRegistry()
     registry.register(
         SlashCommand(
@@ -421,6 +527,10 @@ def create_default_command_registry() -> CommandRegistry:
 
 
 def _help_command(context: CommandContext) -> CommandResult:
+    """Render the built-in slash-command help listing.
+
+    渲染内置斜杠命令帮助列表。
+    """
     lines = ["Available commands:"]
     for command in context.registry.list_commands():
         lines.append(f"{command.usage}\t{command.description}")
@@ -428,14 +538,26 @@ def _help_command(context: CommandContext) -> CommandResult:
 
 
 def _exit_command(context: CommandContext) -> CommandResult:
+    """Request that the current frontend exit.
+
+    请求当前前端退出。
+    """
     return CommandResult(handled=True, exit_requested=True, message="Exiting session.")
 
 
 def _new_command(context: CommandContext) -> CommandResult:
+    """Request creation of a new coding session.
+
+    请求创建新的编码会话。
+    """
     return CommandResult(handled=True, new_session_requested=True)
 
 
 def _compact_command(context: CommandContext) -> CommandResult:
+    """Request manual context compaction with optional instructions.
+
+    请求手动压缩上下文，并可附带指令。
+    """
     return CommandResult(
         handled=True,
         compact_summary=context.args.strip(),
@@ -443,6 +565,10 @@ def _compact_command(context: CommandContext) -> CommandResult:
 
 
 def _export_command(context: CommandContext) -> CommandResult:
+    """Parse and request a session export.
+
+    解析并请求导出会话。
+    """
     try:
         export_format, destination = _parse_export_args(context.args)
     except ValueError as exc:
@@ -456,6 +582,10 @@ def _export_command(context: CommandContext) -> CommandResult:
 
 
 def _status_command(context: CommandContext) -> CommandResult:
+    """Render the current session and model status.
+
+    渲染当前会话和模型状态。
+    """
     session = context.session
     context_usage = getattr(session, "context_usage", None)
     lines = [
@@ -509,6 +639,10 @@ def _status_command(context: CommandContext) -> CommandResult:
 
 
 def _system_command(context: CommandContext) -> CommandResult:
+    """Render the effective system prompt and its sources.
+
+    渲染有效系统提示词及其来源。
+    """
     if context.args:
         return CommandResult(handled=True, message="Usage: /system")
     inspection = getattr(context.session, "system_prompt_inspection", None)
@@ -532,6 +666,10 @@ def _system_command(context: CommandContext) -> CommandResult:
 
 
 def _hotkeys_command(context: CommandContext) -> CommandResult:
+    """Request display of frontend keyboard shortcuts.
+
+    请求显示前端键盘快捷键。
+    """
     lines = [
         "Common keyboard shortcuts:",
         "- Enter: submit prompt",
@@ -551,12 +689,20 @@ def _hotkeys_command(context: CommandContext) -> CommandResult:
 
 
 def _skills_command(context: CommandContext) -> CommandResult:
+    """List skills available to the current session.
+
+    列出当前会话可用的技能。
+    """
     if context.args:
         return CommandResult(handled=True, message="Usage: /skills")
     return CommandResult(handled=True, skills_picker_requested=True)
 
 
 def _resources_command(context: CommandContext) -> CommandResult:
+    """Render resource discovery diagnostics.
+
+    渲染资源发现诊断信息。
+    """
     session = context.session
     lines = [
         f"Skills: {len(session.skills)}",
@@ -572,12 +718,23 @@ def _resources_command(context: CommandContext) -> CommandResult:
 
 
 def _reload_command(context: CommandContext) -> CommandResult:
+    """Delegate asynchronous resource reload to the frontend.
+
+    将异步资源重新加载交给前端处理。
+    """
     # Reload owns async extension lifecycle hooks, so frontends execute it from
     # their async command path rather than inside this synchronous registry.
+    #
+    # 重新加载负责异步扩展生命周期钩子，因此前端应从异步命令路径执行它，
+    # 而不是在这个同步注册表中执行。
     return CommandResult(handled=True, reload_requested=True)
 
 
 def _context_command(context: CommandContext) -> CommandResult:
+    """Render context-window usage and compaction settings.
+
+    渲染上下文窗口用量和压缩设置。
+    """
     session = context.session
     if not session.context_files:
         lines = ["No project context files loaded."]
@@ -595,6 +752,10 @@ def _context_command(context: CommandContext) -> CommandResult:
 
 
 def _skill_command(context: CommandContext) -> CommandResult:
+    """Validate a direct skill invocation request.
+
+    验证直接技能调用请求。
+    """
     return CommandResult(
         handled=True,
         message="Use /skill:<name> [request] to expand a loaded skill into your prompt.",
@@ -602,12 +763,20 @@ def _skill_command(context: CommandContext) -> CommandResult:
 
 
 def _prompts_command(context: CommandContext) -> CommandResult:
+    """List prompt templates available to the session.
+
+    列出会话可用的提示词模板。
+    """
     if context.args:
         return CommandResult(handled=True, message="Usage: /prompts")
     return CommandResult(handled=True, prompts_picker_requested=True)
 
 
 def _resume_command(context: CommandContext) -> CommandResult:
+    """Request resuming a selected durable session.
+
+    请求恢复选定的持久化会话。
+    """
     if not context.args:
         return CommandResult(handled=True, resume_picker_requested=True)
     manager = context.session.session_manager
@@ -623,12 +792,20 @@ def _resume_command(context: CommandContext) -> CommandResult:
 
 
 def _tree_command(context: CommandContext) -> CommandResult:
+    """Request display of the branchable session tree.
+
+    请求显示可分支的会话树。
+    """
     if context.args:
         return CommandResult(handled=True, message="Usage: /tree")
     return CommandResult(handled=True, tree_picker_requested=True)
 
 
 def _name_command(context: CommandContext) -> CommandResult:
+    """Read or request an update to the current session name.
+
+    读取或请求更新当前会话名称。
+    """
     manager = context.session.session_manager
     session_id = context.session.session_id
     if manager is None or session_id is None:
@@ -657,6 +834,10 @@ def _name_command(context: CommandContext) -> CommandResult:
 
 
 def _format_sessions(context: CommandContext) -> str:
+    """Format resumable sessions for command output.
+
+    格式化可恢复会话以供命令输出。
+    """
     manager = context.session.session_manager
     if manager is None:
         return "Session manager is not available."
@@ -672,10 +853,18 @@ def _format_sessions(context: CommandContext) -> str:
 
 
 def _tools_command(context: CommandContext) -> CommandResult:
+    """List tools available to the current agent.
+
+    列出当前代理可用的工具。
+    """
     return CommandResult(handled=True, tools_picker_requested=True)
 
 
 def _model_command(context: CommandContext) -> CommandResult:
+    """Read or request a change to the active model.
+
+    读取或请求更改当前活动模型。
+    """
     refresh_error = _refresh_provider_settings(context.session)
     if refresh_error is not None:
         return refresh_error
@@ -703,6 +892,10 @@ def _model_command(context: CommandContext) -> CommandResult:
 
 
 def _scoped_models_command(context: CommandContext) -> CommandResult:
+    """Request display of the scoped model selector.
+
+    请求显示限定范围的模型选择器。
+    """
     refresh_error = _refresh_provider_settings(context.session)
     if refresh_error is not None:
         return refresh_error
@@ -713,6 +906,10 @@ def _scoped_models_command(context: CommandContext) -> CommandResult:
 
 
 def _thinking_command(context: CommandContext) -> CommandResult:
+    """Read or request a change to the active thinking level.
+
+    读取或请求更改当前思考等级。
+    """
     session = context.session
     available = tuple(session.available_thinking_levels)
     if not context.args:
@@ -750,6 +947,10 @@ def _thinking_command(context: CommandContext) -> CommandResult:
 
 
 def _thinking_status_lines(session: CommandSession) -> list[str]:
+    """Format thinking-level status lines for command output.
+
+    格式化思考等级状态行以供命令输出。
+    """
     if tuple(session.available_thinking_levels):
         return [f"Thinking mode: {session.thinking_level}"]
     lines = ["Thinking mode: unavailable"]
@@ -760,16 +961,27 @@ def _thinking_status_lines(session: CommandSession) -> list[str]:
 
 
 def _thinking_unavailable_reason(session: CommandSession) -> str | None:
+    """Return why thinking controls are unavailable for the session.
+
+    返回会话中思考控制不可用的原因。
+    """
     reason = getattr(session, "thinking_unavailable_reason", None)
     return reason if isinstance(reason, str) and reason else None
 
 
 def _theme_command(context: CommandContext) -> CommandResult:
+    """Request a theme change through the TUI integration.
+
+    通过 TUI 集成请求更改主题。
+    """
     if not context.args:
         return CommandResult(handled=True, theme_picker_requested=True)
 
     # Imported lazily so importing this module never pulls in `tau_coding.tui`
     # (whose package __init__ imports Textual) until /theme actually executes.
+    #
+    # 采用延迟导入，避免仅导入此模块就加载 `tau_coding.tui`（其包初始化会
+    # 导入 Textual）；只有真正执行 /theme 时才加载。
     from tau_coding.tui.themes import available_tui_theme_names
 
     theme_name = context.args.strip()
@@ -784,18 +996,30 @@ def _theme_command(context: CommandContext) -> CommandResult:
 
 
 def _local_command(context: CommandContext) -> CommandResult:
+    """Delegate local-inference management to the frontend.
+
+    将本地推理管理交给前端处理。
+    """
     if context.args:
         return CommandResult(handled=True, message="Usage: /local")
     return CommandResult(handled=True, local_requested=True)
 
 
 def _sidebar_command(context: CommandContext) -> CommandResult:
+    """Request toggling the frontend sidebar.
+
+    请求切换前端侧边栏。
+    """
     if context.args:
         return CommandResult(handled=True, message="Usage: /sidebar")
     return CommandResult(handled=True, sidebar_toggle_requested=True)
 
 
 def _login_command(context: CommandContext) -> CommandResult:
+    """Start provider login from a slash command.
+
+    通过斜杠命令启动提供者登录。
+    """
     provider_name = context.args.strip()
     if provider_name in {"custom", "new", "add"}:
         return CommandResult(handled=True, custom_provider_login_requested=True)
@@ -829,6 +1053,10 @@ def _login_command(context: CommandContext) -> CommandResult:
 
 
 def _logout_command(context: CommandContext) -> CommandResult:
+    """Remove credentials for a selected provider.
+
+    删除选定提供者的凭据。
+    """
     provider_name = context.args.strip()
     if provider_name:
         entry = builtin_provider_entry(provider_name)
@@ -846,6 +1074,10 @@ def _logout_command(context: CommandContext) -> CommandResult:
 
 
 def _format_session_record(record: CodingSessionRecord) -> str:
+    """Format one durable session record for display.
+
+    格式化一条持久化会话记录以供显示。
+    """
     title = record.title or "Untitled"
     return f"- {record.id}: {title} ({record.model}) {record.cwd}"
 
@@ -853,6 +1085,10 @@ def _format_session_record(record: CodingSessionRecord) -> str:
 def _format_diagnostics(
     diagnostics: Sequence[ResourceDiagnostic], *, kind: str | None = None
 ) -> list[str]:
+    """Format resource diagnostics, optionally filtering by kind.
+
+    格式化资源诊断信息，并可选择按类型筛选。
+    """
     filtered = [diagnostic for diagnostic in diagnostics if kind is None or diagnostic.kind == kind]
     if not filtered:
         return ["Resource diagnostics: none"]
@@ -862,6 +1098,10 @@ def _format_diagnostics(
 
 
 def _refresh_provider_settings(session: CommandSession) -> CommandResult | None:
+    """Reload provider settings and convert failures to command results.
+
+    重新加载提供者设置，并将失败转换为命令结果。
+    """
     try:
         session.reload_provider_settings()
     except ValueError as exc:
@@ -873,6 +1113,10 @@ def _refresh_provider_settings(session: CommandSession) -> CommandResult | None:
 
 
 def format_reload_summary(summary: CodingReloadSummary) -> str:
+    """Format a resource reload summary for the user.
+
+    格式化资源重新加载摘要以供用户查看。
+    """
     lines = [
         "Reloaded local coding resources and project context.",
         "Resources:",
@@ -892,6 +1136,10 @@ def format_reload_summary(summary: CodingReloadSummary) -> str:
 
 
 def _format_reload_category(summary: ReloadCategorySummary) -> str:
+    """Format changes for one reload resource category.
+
+    格式化一个重新加载资源类别的变更。
+    """
     status = "changed" if summary.changed else "unchanged"
     delta = _format_count_delta(summary.delta)
     suffix = f", {delta}" if delta is not None else ""
@@ -899,17 +1147,29 @@ def _format_reload_category(summary: ReloadCategorySummary) -> str:
 
 
 def _format_count_delta(delta: int) -> str | None:
+    """Format a signed resource-count change.
+
+    格式化带符号的资源数量变化。
+    """
     if delta == 0:
         return None
     return f"{delta:+d}"
 
 
 def _parse_command(text: str) -> tuple[str, str]:
+    """Split slash-command text into a normalized name and arguments.
+
+    将斜杠命令文本拆分为规范化名称和参数。
+    """
     command, separator, args = text[1:].partition(" ")
     return _normalize_name(command), args.strip() if separator else ""
 
 
 def _parse_export_args(args: str) -> tuple[str | None, Path | None]:
+    """Parse optional export format and destination arguments.
+
+    解析可选的导出格式和目标路径参数。
+    """
     parts = args.split()
     export_format: str | None = None
     destination: Path | None = None
@@ -934,10 +1194,18 @@ def _parse_export_args(args: str) -> tuple[str | None, Path | None]:
 
 
 def _validated_session_name(value: str) -> str:
+    """Normalize a session name while preserving command-facing errors.
+
+    规范化会话名称，同时保留面向命令的错误。
+    """
     if not value.strip():
         raise ValueError("Usage: /name <new name>")
     return normalize_session_name(value)
 
 
 def _normalize_name(name: str) -> str:
+    """Normalize a slash-command name for registry lookup.
+
+    规范化斜杠命令名称以供注册表查找。
+    """
     return name.strip().removeprefix("/").lower()

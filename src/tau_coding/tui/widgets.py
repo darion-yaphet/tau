@@ -1,4 +1,7 @@
-"""Small Textual widgets for Tau's interactive TUI."""
+"""Small Textual widgets for Tau's interactive TUI.
+
+Tau 交互式 TUI 使用的小型 Textual 组件。
+"""
 
 from __future__ import annotations
 
@@ -64,75 +67,105 @@ SIDEBAR_COMMA_LIST_MAX_LINES = 3
 
 @dataclass(frozen=True, slots=True)
 class TranscriptLine:
-    """Plain transcript line used by compatibility inspection helpers."""
+    """Plain transcript line used by compatibility inspection helpers.
+
+    供兼容性检查辅助函数使用的纯文本记录行。
+    """
 
     text: str
 
 
 class SessionSummarySource(Protocol):
-    """Session attributes displayed by the sidebar."""
+    """Session attributes displayed by the sidebar.
+
+    侧栏所显示的会话属性协议。
+    """
 
     @property
+    # 返回会话的当前工作目录。
     def cwd(self) -> Path: ...
 
     @property
+    # 返回当前模型标识。
     def model(self) -> str: ...
 
     @property
+    # 返回模型提供商名称。
     def provider_name(self) -> str: ...
 
     @property
+    # 返回会话可用的工具序列。
     def tools(self) -> Sequence[AgentTool]: ...
 
     @property
+    # 返回会话已加载的技能序列。
     def skills(self) -> Sequence[Skill]: ...
 
     @property
+    # 返回会话可用的提示词模板。
     def prompt_templates(self) -> Sequence[PromptTemplate]: ...
 
     @property
+    # 返回项目上下文文件列表。
     def context_files(self) -> Sequence[ProjectContextFile]: ...
 
     @property
+    # 返回组成系统提示词的文件路径。
     def system_prompt_files(self) -> Sequence[Path]: ...
 
     @property
+    # 返回当前上下文的估算令牌数。
     def context_token_estimate(self) -> int: ...
 
     @property
+    # 指示提供商是否返回了上下文用量。
     def has_provider_context_usage(self) -> bool: ...
 
     @property
+    # 返回自动压缩上下文的令牌阈值。
     def auto_compact_token_threshold(self) -> int | None: ...
 
     @property
+    # 返回模型上下文窗口的令牌上限。
     def context_window_tokens(self) -> int: ...
 
     @property
+    # 返回当前思考等级。
     def thinking_level(self) -> str: ...
 
     @property
+    # 返回可选的会话标题。
     def session_title(self) -> str | None: ...
 
     @property
+    # 返回已加载扩展的名称。
     def extension_names(self) -> Sequence[str]: ...
 
     @property
+    # 返回会话累计统计信息。
     def session_stats(self) -> SessionStats: ...
 
 
 class SidebarFileItem(Static):
-    """One keyboard- and mouse-openable file in the session sidebar."""
+    """One keyboard- and mouse-openable file in the session sidebar.
+
+    会话侧栏中可通过键盘或鼠标打开的单个文件项。
+    """
 
     can_focus = True
 
     class OpenRequested(Message):
-        """Request opening this item's file in the main area."""
+        """Request opening this item's file in the main area.
 
+        请求在主区域打开此项目对应的文件。
+        """
+
+        # 保存发出打开请求的侧栏文件项。
         def __init__(self, item: SidebarFileItem) -> None:
             super().__init__()
             self.item = item
 
+    # 初始化侧栏文件项的标签、路径、类型与项目符号。
     def __init__(self, label: str, *, path: Path, kind: str, bullet: str = "•") -> None:
         super().__init__(f"  {bullet} {label}", classes="sidebar-file-item", markup=False)
         self.path = path
@@ -141,13 +174,19 @@ class SidebarFileItem(Static):
         self.tooltip = str(path)
 
     def on_click(self, event: Any) -> None:
-        """Open the represented file on a primary click."""
+        """Open the represented file on a primary click.
+
+        在主鼠标键点击时打开此项目代表的文件。
+        """
         if event.button == 1:
             event.stop()
             self.post_message(self.OpenRequested(self))
 
     def on_key(self, event: Any) -> None:
-        """Open the represented file from keyboard focus."""
+        """Open the represented file from keyboard focus.
+
+        在键盘焦点位于此项目时打开其代表的文件。
+        """
         if event.key == "enter":
             event.stop()
             event.prevent_default()
@@ -155,8 +194,12 @@ class SidebarFileItem(Static):
 
 
 class SessionSidebar(Vertical):
-    """Compact sidebar with collapsible resource lists and pinned branding."""
+    """Compact sidebar with collapsible resource lists and pinned branding.
 
+    带可折叠资源列表和固定品牌标识的紧凑侧栏。
+    """
+
+    # 依次构建会话摘要、上下文、技能、提示词、扩展和品牌区域。
     def compose(self) -> Any:
         with VerticalScroll(id="sidebar-scroll"):
             yield Static("", id="sidebar-content")
@@ -198,7 +241,10 @@ class SessionSidebar(Vertical):
         *,
         theme: TuiTheme = TAU_DARK_THEME,
     ) -> None:
-        """Redraw the sidebar only when displayed session metadata changed."""
+        """Redraw the sidebar only when displayed session metadata changed.
+
+        仅在所显示的会话元数据发生变化时重绘侧栏。
+        """
         fingerprint = _session_summary_fingerprint(session, theme=theme)
         if fingerprint == self._summary_fingerprint:
             return
@@ -243,7 +289,10 @@ class SessionSidebar(Vertical):
 
 
 class CompactSessionInfo(Static):
-    """Single-line session metadata for narrow TUI layouts."""
+    """Single-line session metadata for narrow TUI layouts.
+
+    用于狭窄 TUI 布局的单行会话元数据。
+    """
 
     _summary_fingerprint: tuple[object, ...] | None = None
 
@@ -253,7 +302,10 @@ class CompactSessionInfo(Static):
         *,
         theme: TuiTheme = TAU_DARK_THEME,
     ) -> None:
-        """Redraw compact session metadata only when its inputs changed."""
+        """Redraw compact session metadata only when its inputs changed.
+
+        仅在输入变化时重绘紧凑会话元数据。
+        """
         fingerprint = _session_summary_fingerprint(session, theme=theme)
         if fingerprint == self._summary_fingerprint:
             return
@@ -262,12 +314,18 @@ class CompactSessionInfo(Static):
 
 
 def _sidebar_resource_title(label: str, detail: str, *, theme: TuiTheme) -> str:
-    """Style a resource label separately from its quieter summary."""
+    """Style a resource label separately from its quieter summary.
+
+    分别设置资源标签及其弱化摘要的样式。
+    """
     return f"[bold {theme.prompt_text}]{label}[/] [{theme.completion_description}]({detail})[/]"
 
 
 def _skill_section_title(session: SessionSummarySource, *, theme: TuiTheme) -> str:
-    """Summarize skill count and estimated system-prompt footprint."""
+    """Summarize skill count and estimated system-prompt footprint.
+
+    汇总技能数量及其预计占用的系统提示词令牌数。
+    """
     skill_prompt = (
         format_skills_for_prompt(session.skills)
         if any(tool.name == "read" for tool in session.tools)
@@ -281,6 +339,7 @@ def _skill_section_title(session: SessionSummarySource, *, theme: TuiTheme) -> s
     )
 
 
+# 生成涵盖所有可见会话元数据的指纹，用于跳过无变化的重绘。
 def _session_summary_fingerprint(
     session: SessionSummarySource,
     *,
@@ -311,7 +370,10 @@ def _session_summary_fingerprint(
 
 
 class TauMarkdownBlock(MarkdownBlock):
-    """Markdown block that applies Tau's themed inline link color."""
+    """Markdown block that applies Tau's themed inline link color.
+
+    应用 Tau 主题内联链接颜色的 Markdown 块。
+    """
 
     DEFAULT_CSS = """
     TauMarkdownBlock {
@@ -325,13 +387,20 @@ class TauMarkdownBlock(MarkdownBlock):
     def allow_select(self) -> bool:
         """Only allow native selection once Textual has mounted the block.
 
+        仅在 Textual 已挂载该块后才允许原生选择。
+
         Textual may hit freshly-created Markdown blocks during a mouse-down before
         they have a parent. Its selection startup path assumes selected content
         widgets have a parent container, so an unmounted selectable Markdown block
         can crash with ``container is None``.
+
+        鼠标按下时，Textual 可能命中尚无父级的新建 Markdown 块。其选择启动
+        路径假设被选内容组件具有父容器，因此可选择但尚未挂载的 Markdown 块
+        可能因 ``container is None`` 而崩溃。
         """
         return self.parent is not None and super().allow_select
 
+    # 将解析后的令牌内容中的可点击链接替换为 Tau 主题样式。
     def _token_to_content(self, token: Any) -> Any:
         content = super()._token_to_content(token)
         markdown = self._markdown
@@ -348,9 +417,13 @@ class TauMarkdownBlock(MarkdownBlock):
 
 
 class TauMarkdownFence(MarkdownFence):
-    """Code fence that discards invalid spans produced by Textual's highlighter."""
+    """Code fence that discards invalid spans produced by Textual's highlighter.
+
+    丢弃 Textual 高亮器生成的无效区间的代码围栏。
+    """
 
     @classmethod
+    # 高亮代码，并把所有样式区间裁剪到有效文本范围内。
     def highlight(
         cls,
         code: str,
@@ -371,14 +444,22 @@ class TauMarkdownFence(MarkdownFence):
 
 
 class ThemedMarkdownWidget(TextualMarkdown):
-    """Textual Markdown widget reserved for Tau transcript streaming."""
+    """Textual Markdown widget reserved for Tau transcript streaming.
+
+    专供 Tau 对话记录流式输出使用的 Textual Markdown 组件。
+    """
 
     @property
     def allow_select(self) -> bool:
         """Ignore stale mouse hits after a transcript widget is detached.
 
+        对话记录组件分离后忽略过期的鼠标命中。
+
         Textual's selection startup dereferences the selected widget's parent.
         Its compositor can still return a removed widget before the next layout.
+
+        Textual 启动选择时会解引用被选组件的父级；在下一次布局前，其合成器
+        仍可能返回已经移除的组件。
         """
         return self.parent is not None and super().allow_select
 
@@ -419,6 +500,9 @@ class ThemedMarkdownWidget(TextualMarkdown):
     /* Textual's built-in `MarkdownFence:light` rule (type + pseudo-class)
        outranks the plain descendant selector above, so restate the themed
        background for light themes. */
+
+    /* Textual 内置的 `MarkdownFence:light` 规则（类型加伪类）优先级高于
+       上面的普通后代选择器，因此需要为浅色主题重新声明主题背景。 */
     ThemedMarkdownWidget MarkdownFence:light {
         background: $tau-markdown-code-block-background;
     }
@@ -433,6 +517,7 @@ class ThemedMarkdownWidget(TextualMarkdown):
     }
     """
 
+    # 初始化带 Tau 链接样式的 Markdown 流式显示组件。
     def __init__(
         self,
         markdown: str | None = None,
@@ -446,6 +531,9 @@ class ThemedMarkdownWidget(TextualMarkdown):
 
 # Roles rendered as free-flowing text with no left accent or role background,
 # matching how they appear while streaming.
+
+# 这些角色以自由流动文本呈现，不显示左侧强调线或角色背景，
+# 从而与流式输出时的外观保持一致。
 _BORDERLESS_TRANSCRIPT_ROLES = frozenset({"assistant", "thinking"})
 _HIDDEN_THINKING_PLACEHOLDER = "Thinking… Press Ctrl+T to show thinking tokens."
 TRANSCRIPT_WINDOW_ITEMS = 200
@@ -454,7 +542,10 @@ TRANSCRIPT_WINDOW_OVERSCAN_ITEMS = 40
 
 
 class TranscriptWindowBoundary(Static):
-    """Small paging sentinel shown when transcript items are outside the DOM window."""
+    """Small paging sentinel shown when transcript items are outside the DOM window.
+
+    当对话项位于 DOM 窗口之外时显示的小型分页哨兵。
+    """
 
     ALLOW_SELECT = False
     DEFAULT_CSS = """
@@ -467,14 +558,19 @@ class TranscriptWindowBoundary(Static):
     }
     """
 
+    # 初始化指向更早或更晚消息的分页边界。
     def __init__(self, direction: Literal["earlier", "later"], count: int) -> None:
         self.direction = direction
         super().__init__(self._label(count), classes=f"transcript-window-{direction}")
 
     def update_count(self, count: int) -> None:
-        """Update the hidden-item count without scheduling a layout pass."""
+        """Update the hidden-item count without scheduling a layout pass.
+
+        更新隐藏项目数，同时不安排新的布局过程。
+        """
         self.update(self._label(count), layout=False)
 
+    # 根据方向与数量生成分页边界标签。
     def _label(self, count: int) -> str:
         noun = "message" if count == 1 else "messages"
         arrow = "↑" if self.direction == "earlier" else "↓"
@@ -482,7 +578,10 @@ class TranscriptWindowBoundary(Static):
 
 
 class SystemPromptSectionWidget(Vertical):
-    """One prompt source with a matching accent and faint background."""
+    """One prompt source with a matching accent and faint background.
+
+    带匹配强调色和浅色背景的单个提示词来源。
+    """
 
     DEFAULT_CSS = """
     SystemPromptSectionWidget {
@@ -510,6 +609,7 @@ class SystemPromptSectionWidget(Vertical):
     }
     """
 
+    # 初始化提示词来源区段，并从来源类型推导强调色与背景色。
     def __init__(
         self,
         source: SystemPromptSource,
@@ -529,6 +629,7 @@ class SystemPromptSectionWidget(Vertical):
         self.styles.background = background
         self.styles.border_left = ("tall", self.source_color)
 
+    # 组合来源名称、来源位置和经过保护处理的 Markdown 正文。
     def compose(self) -> Any:
         name = Text()
         name.append(f"{self.index:02d} · ", style=self._theme.muted_text)
@@ -545,7 +646,10 @@ class SystemPromptSectionWidget(Vertical):
 
 
 class SystemPromptSourcesWidget(Vertical):
-    """Structured rendering for a sourced system prompt."""
+    """Structured rendering for a sourced system prompt.
+
+    对带来源信息的系统提示词进行结构化渲染。
+    """
 
     DEFAULT_CSS = """
     SystemPromptSourcesWidget {
@@ -560,11 +664,13 @@ class SystemPromptSourcesWidget(Vertical):
     }
     """
 
+    # 保存系统提示词来源及其渲染主题。
     def __init__(self, sources: tuple[SystemPromptSource, ...], *, theme: TuiTheme) -> None:
         self.sources = sources
         self._theme = theme
         super().__init__()
 
+    # 构建标题，并按顺序生成每个系统提示词来源区段。
     def compose(self) -> Any:
         yield Static(
             Text("/system", style=f"bold {self._theme.accent}"), classes="system-prompt-title"
@@ -574,7 +680,10 @@ class SystemPromptSourcesWidget(Vertical):
 
 
 def _system_prompt_source_color(source: SystemPromptSource, *, theme: TuiTheme) -> str:
-    """Choose a stable theme color for one prompt-source kind."""
+    """Choose a stable theme color for one prompt-source kind.
+
+    为一种提示词来源类型选择稳定的主题颜色。
+    """
     return {
         "default": theme.accent,
         "system": theme.role_styles["assistant"].border,
@@ -587,7 +696,10 @@ def _system_prompt_source_color(source: SystemPromptSource, *, theme: TuiTheme) 
 
 
 class TranscriptMessageWidget(Horizontal):
-    """One selectable transcript message rendered as a full-height role block."""
+    """One selectable transcript message rendered as a full-height role block.
+
+    渲染为全高角色块的单条可选择对话消息。
+    """
 
     DEFAULT_CSS = """
     TranscriptMessageWidget {
@@ -608,6 +720,7 @@ class TranscriptMessageWidget(Horizontal):
 
     """
 
+    # 初始化消息的选择文本、渲染形式、角色样式及边框背景。
     def __init__(
         self,
         item: ChatItem,
@@ -656,9 +769,11 @@ class TranscriptMessageWidget(Horizontal):
             if background:
                 self.styles.background = background
 
+    # 组合当前消息所需的正文组件。
     def compose(self) -> Any:
         yield self._body_widget()
 
+    # 按消息类型选择系统提示词、自定义内容、纯文本或 Markdown 正文组件。
     def _body_widget(self) -> Widget:
         body: Static | ThemedMarkdownWidget
         if self.item.system_prompt_sources is not None:
@@ -704,7 +819,10 @@ class TranscriptMessageWidget(Horizontal):
         return body
 
     def get_selection(self, selection: Selection) -> tuple[str, str] | None:
-        """Return selected plain text from this message, not rendered Markdown markup."""
+        """Return selected plain text from this message, not rendered Markdown markup.
+
+        返回此消息中选中的纯文本，而不是渲染后的 Markdown 标记。
+        """
         selected_text = _extract_text_selection(self.selection_text, selection)
         if not selected_text:
             return None
@@ -719,8 +837,13 @@ class TranscriptMessageWidget(Horizontal):
     ) -> bool:
         """Re-render a plain-body row's text in place; False when unsupported.
 
+        原位重新渲染纯文本正文行；不支持时返回 False。
+
         Used for high-frequency updates (spinner frames, live tool progress)
         where remounting the widget causes visible layout flicker.
+
+        用于高频更新（旋转指示帧、实时工具进度）；这些场景下重新挂载组件会
+        造成可见的布局闪烁。
         """
         if self.item.role == "custom" or not _use_plain_transcript_body(self.item):
             return False
@@ -779,7 +902,10 @@ class TranscriptMessageWidget(Horizontal):
 
 
 class StreamingTranscriptMessageWidget(ThemedMarkdownWidget):
-    """One assistant or thinking Markdown block that accepts streamed fragments."""
+    """One assistant or thinking Markdown block that accepts streamed fragments.
+
+    接收流式片段的单个助手或思考 Markdown 块。
+    """
 
     DEFAULT_CSS = """
     StreamingTranscriptMessageWidget {
@@ -804,6 +930,7 @@ class StreamingTranscriptMessageWidget(ThemedMarkdownWidget):
     }
     """
 
+    # 初始化流式消息，并应用与最终消息一致的角色前景色。
     def __init__(self, item: ChatItem, *, theme: TuiTheme) -> None:
         if item.role not in {"assistant", "thinking"}:
             raise ValueError("Streaming transcript widgets only support assistant/thinking items")
@@ -816,18 +943,25 @@ class StreamingTranscriptMessageWidget(ThemedMarkdownWidget):
         self.add_class("-streaming")
         # Apply the role foreground so streamed text matches the finalized block
         # (e.g. dimmed thinking) instead of shifting color on the next redraw.
+
+        # 应用角色前景色，使流式文本与最终块保持一致（例如弱化的思考文本），
+        # 避免在下一次重绘时发生颜色跳变。
         foreground, _ = _split_rich_style_colors(_chat_item_role_style(item, theme).body)
         if foreground:
             self.styles.color = foreground
 
     @property
+    # 延迟创建并返回 Textual Markdown 流。
     def stream(self) -> MarkdownStream:
         if self._stream is None:
             self._stream = self.get_stream(self)
         return self._stream
 
     async def append_fragment(self, fragment: str) -> None:
-        """Append streamed markdown without reparsing the full accumulated message."""
+        """Append streamed markdown without reparsing the full accumulated message.
+
+        追加流式 Markdown，而无需重新解析完整的累计消息。
+        """
         if not fragment:
             return
         self.item.text += fragment
@@ -835,7 +969,10 @@ class StreamingTranscriptMessageWidget(ThemedMarkdownWidget):
         await self.stream.write(fragment)
 
     async def _stop_stream(self) -> None:
-        """Stop the Textual markdown stream, flushing pending fragments first."""
+        """Stop the Textual markdown stream, flushing pending fragments first.
+
+        先刷新待处理片段，再停止 Textual Markdown 流。
+        """
         stream = self._stream
         if stream is None:
             return
@@ -843,14 +980,20 @@ class StreamingTranscriptMessageWidget(ThemedMarkdownWidget):
         await stream.stop()
 
     async def replace_text(self, text: str) -> None:
-        """Replace the current markdown text, usually with corrected final content."""
+        """Replace the current markdown text, usually with corrected final content.
+
+        替换当前 Markdown 文本，通常用于写入修正后的最终内容。
+        """
         await self._stop_stream()
         self.item.text = text
         self.selection_text = text
         await self.update(text)
 
     async def finalize(self, text: str | None = None) -> None:
-        """Mark the streamed message complete and restore finalized Markdown chrome."""
+        """Mark the streamed message complete and restore finalized Markdown chrome.
+
+        将流式消息标记为完成，并恢复最终状态的 Markdown 外观。
+        """
         if text is not None and text != self.selection_text:
             await self.replace_text(text)
         else:
@@ -863,11 +1006,17 @@ class StreamingTranscriptMessageWidget(ThemedMarkdownWidget):
         self.add_class("-finalized")
 
     async def on_unmount(self) -> None:
-        """Cancel the markdown stream task if the widget is removed mid-stream."""
+        """Cancel the markdown stream task if the widget is removed mid-stream.
+
+        如果组件在流式输出期间被移除，则取消 Markdown 流任务。
+        """
         await self._stop_stream()
 
     def get_selection(self, selection: Selection) -> tuple[str, str] | None:
-        """Return selected text from this streamed message block."""
+        """Return selected text from this streamed message block.
+
+        返回此流式消息块中选中的文本。
+        """
         selected_text = _extract_text_selection(self.selection_text, selection)
         if not selected_text:
             return None
@@ -875,8 +1024,12 @@ class StreamingTranscriptMessageWidget(ThemedMarkdownWidget):
 
 
 class TranscriptView(VerticalScroll):
-    """Scrollable transcript view backed by individual selectable message widgets."""
+    """Scrollable transcript view backed by individual selectable message widgets.
 
+    由单独可选择消息组件支撑的可滚动对话记录视图。
+    """
+
+    # 初始化有界消息窗口、流式组件引用和自动跟随滚动状态。
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         for legacy_option in ("wrap", "highlight", "markup"):
             kwargs.pop(legacy_option, None)
@@ -903,21 +1056,31 @@ class TranscriptView(VerticalScroll):
         self._bottom_boundary: TranscriptWindowBoundary | None = None
 
     def on_mount(self) -> None:
-        """Follow new transcript content until the user scrolls away."""
+        """Follow new transcript content until the user scrolls away.
+
+        持续跟随新的对话内容，直到用户主动滚离底部。
+        """
         self.follow_output()
 
     def follow_output(self) -> None:
-        """Return to follow mode for a user-driven turn or explicit jump to bottom."""
+        """Return to follow mode for a user-driven turn or explicit jump to bottom.
+
+        在用户发起新轮次或明确跳到底部时恢复跟随模式。
+        """
         self._follow_output = True
         self.anchor(True)
         self._request_follow_scroll(force=True)
 
     def _request_follow_scroll(self, *, force: bool = False) -> None:
-        """Scroll to the bottom after layout if follow mode is still active."""
+        """Scroll to the bottom after layout if follow mode is still active.
+
+        如果跟随模式仍然有效，则在布局完成后滚动到底部。
+        """
         if self._follow_scroll_pending and not force:
             return
         self._follow_scroll_pending = True
 
+        # 刷新后再次确认跟随状态，并执行实际的底部滚动。
         def scroll_if_still_following() -> None:
             self._follow_scroll_pending = False
             if force or self._follow_output or self.is_vertical_scroll_end:
@@ -927,11 +1090,17 @@ class TranscriptView(VerticalScroll):
 
     @property
     def _should_follow_output(self) -> bool:
-        """Return whether new content should keep the viewport pinned to the bottom."""
+        """Return whether new content should keep the viewport pinned to the bottom.
+
+        返回新内容是否应使视口保持固定在底部。
+        """
         return self._follow_output or self.is_vertical_scroll_end
 
     def watch_scroll_y(self, old_value: float, new_value: float) -> None:
-        """Track follow mode and page the bounded transcript window near its edges."""
+        """Track follow mode and page the bounded transcript window near its edges.
+
+        跟踪跟随模式，并在接近边缘时翻动有界对话窗口。
+        """
         super().watch_scroll_y(old_value, new_value)
         if new_value < old_value:
             self._follow_output = False
@@ -948,10 +1117,12 @@ class TranscriptView(VerticalScroll):
             self._schedule_window_shift("later")
 
     @property
+    # 判断当前挂载窗口是否已经覆盖最新消息。
     def _window_is_latest(self) -> bool:
         state = self._render_state
         return state is None or self._window_end >= len(state.items)
 
+    # 合并重复请求，并安排向指定方向移动对话窗口。
     def _schedule_window_shift(self, direction: Literal["earlier", "later"]) -> None:
         if self._window_shift_pending:
             return
@@ -959,7 +1130,10 @@ class TranscriptView(VerticalScroll):
         self.call_later(self._shift_window, direction)
 
     async def _shift_window(self, direction: Literal["earlier", "later"]) -> None:
-        """Move the mounted window while keeping one existing message as the anchor."""
+        """Move the mounted window while keeping one existing message as the anchor.
+
+        移动已挂载窗口，同时保留一条现有消息作为滚动锚点。
+        """
         state = self._render_state
         if state is None or not state.items:
             self._window_shift_pending = False
@@ -985,6 +1159,7 @@ class TranscriptView(VerticalScroll):
         self._window_end = new_end
         self._redraw(scroll_end=False, preserve_window=True)
 
+        # 窗口重绘后恢复锚点位置，并清除移动中的状态。
         def restore_anchor() -> None:
             try:
                 if anchor_item is None:
@@ -1004,11 +1179,17 @@ class TranscriptView(VerticalScroll):
         self.call_after_refresh(restore_anchor)
 
     async def finish_thinking_message(self) -> None:
-        """Close a thinking block at its explicit stream boundary."""
+        """Close a thinking block at its explicit stream boundary.
+
+        在明确的流边界处关闭思考块。
+        """
         await self._finalize_active_thinking_message()
 
     async def _finalize_active_thinking_message(self) -> None:
-        """Stop streaming for a completed thinking block before another block starts."""
+        """Stop streaming for a completed thinking block before another block starts.
+
+        在另一个块开始前停止已完成思考块的流式输出。
+        """
         widget = self._active_thinking_widget
         if widget is None:
             return
@@ -1016,7 +1197,10 @@ class TranscriptView(VerticalScroll):
         self._active_thinking_widget = None
 
     async def _finalize_active_assistant_message(self) -> None:
-        """Stop streaming for a completed assistant block before another block starts."""
+        """Stop streaming for a completed assistant block before another block starts.
+
+        在另一个块开始前停止已完成助手块的流式输出。
+        """
         widget = self._active_assistant_widget
         if widget is None:
             return
@@ -1029,7 +1213,10 @@ class TranscriptView(VerticalScroll):
         *,
         theme: TuiTheme = TAU_DARK_THEME,
     ) -> None:
-        """Render display state while keeping the mounted transcript DOM bounded."""
+        """Render display state while keeping the mounted transcript DOM bounded.
+
+        渲染显示状态，同时限制已挂载对话记录 DOM 的规模。
+        """
         same_state = self._render_state is state
         retained_projection = same_state and any(
             id(item) in self._item_widgets for item in state.items
@@ -1051,7 +1238,10 @@ class TranscriptView(VerticalScroll):
         *,
         theme: TuiTheme = TAU_DARK_THEME,
     ) -> None:
-        """Update thinking rows in the mounted window without touching unrelated widgets."""
+        """Update thinking rows in the mounted window without touching unrelated widgets.
+
+        更新已挂载窗口中的思考行，不触碰无关组件。
+        """
         self._render_state = state
         self._render_theme = theme
         should_follow = self._should_follow_output
@@ -1076,6 +1266,7 @@ class TranscriptView(VerticalScroll):
         pending: list[tuple[ChatItem, TranscriptMessageWidget]] = []
         hidden_run = False
 
+        # 把累计的新组件插入指定组件之前，并清空暂存列表。
         def flush(before: Widget | None) -> None:
             nonlocal pending
             if not pending:
@@ -1135,6 +1326,7 @@ class TranscriptView(VerticalScroll):
                 lambda: self.scroll_to(y=previous_scroll_y, animate=False, immediate=True)
             )
 
+    # 根据当前状态重建有界窗口，并按需保持窗口范围或滚动到底部。
     def _redraw(self, *, scroll_end: bool, preserve_window: bool = False) -> None:
         state = self._render_state
         if state is None:
@@ -1235,7 +1427,10 @@ class TranscriptView(VerticalScroll):
         invocation: str | None = None,
         result_markup: str | None = None,
     ) -> TranscriptMessageWidget | StreamingTranscriptMessageWidget:
-        """Append one item, paging to the latest window only for followed output."""
+        """Append one item, paging to the latest window only for followed output.
+
+        追加一个项目，仅在跟随输出时将窗口翻到最新位置。
+        """
         should_follow = self._should_follow_output if not scroll_end else True
         await self._finalize_active_assistant_message()
         await self._finalize_active_thinking_message()
@@ -1302,7 +1497,10 @@ class TranscriptView(VerticalScroll):
         *,
         theme: TuiTheme = TAU_DARK_THEME,
     ) -> None:
-        """Update only mounted rows whose rendering depends on result visibility."""
+        """Update only mounted rows whose rendering depends on result visibility.
+
+        仅更新渲染依赖结果可见性的已挂载行。
+        """
         self._render_state = state
         self._render_theme = theme
         for item in state.items[self._window_start : self._window_end]:
@@ -1326,12 +1524,18 @@ class TranscriptView(VerticalScroll):
         invocation: str | None = None,
         result_markup: str | None = None,
     ) -> bool:
-        """Update a mounted item in O(1); off-screen state is rendered when paged in."""
+        """Update a mounted item in O(1); off-screen state is rendered when paged in.
+
+        以 O(1) 更新已挂载项目；屏幕外状态会在翻入窗口时渲染。
+        """
         child = self._item_widgets.get(id(item))
         if not isinstance(child, TranscriptMessageWidget) or child.item is not item:
             return False
         # Prefer updating the mounted widget's content: remounting forces a
         # layout pass and visible flicker for live progress and elapsed timers.
+
+        # 优先更新已挂载组件的内容：重新挂载会强制执行布局，并使实时进度和
+        # 已用时间计时器产生可见闪烁。
         if child.refresh_invocation(
             show_tool_results=show_tool_results,
             invocation=invocation,
@@ -1360,7 +1564,10 @@ class TranscriptView(VerticalScroll):
         scroll_end: bool = False,
         preserve_thinking: bool = False,
     ) -> StreamingTranscriptMessageWidget:
-        """Create the active assistant message widget if needed."""
+        """Create the active assistant message widget if needed.
+
+        在需要时创建当前活动的助手消息组件。
+        """
         if self._active_assistant_widget is not None:
             return self._active_assistant_widget
         if not preserve_thinking:
@@ -1385,7 +1592,10 @@ class TranscriptView(VerticalScroll):
         theme: TuiTheme = TAU_DARK_THEME,
         scroll_end: bool = False,
     ) -> None:
-        """Append streamed assistant text when the latest window is mounted."""
+        """Append streamed assistant text when the latest window is mounted.
+
+        在最新窗口已挂载时追加流式助手文本。
+        """
         if not self._window_is_latest:
             return
         should_follow = self._should_follow_output if not scroll_end else True
@@ -1404,10 +1614,15 @@ class TranscriptView(VerticalScroll):
         show_thinking: bool,
         scroll_end: bool = False,
     ) -> None:
-        """Append streamed thinking text or one hidden-thinking placeholder."""
+        """Append streamed thinking text or one hidden-thinking placeholder.
+
+        追加流式思考文本，或追加一个隐藏思考占位符。
+        """
         state = self._render_state
         if state is not None:
             # The adapter adds provisional thinking items before this method runs.
+
+            # 适配器会在此方法运行前添加临时思考项目。
             was_latest = self._window_end >= max(0, len(state.items) - 1)
             if was_latest:
                 self._window_end = len(state.items)
@@ -1456,7 +1671,10 @@ class TranscriptView(VerticalScroll):
         *,
         item: ChatItem | None = None,
     ) -> None:
-        """Finalize the active assistant widget after the provider sends the full message."""
+        """Finalize the active assistant widget after the provider sends the full message.
+
+        在提供商发送完整消息后完成当前活动的助手组件。
+        """
         widget = self._active_assistant_widget
         if widget is None:
             if item is not None:
@@ -1484,7 +1702,10 @@ class TranscriptView(VerticalScroll):
         theme: TuiTheme = TAU_DARK_THEME,
         show_thinking: bool,
     ) -> None:
-        """Replace only the provisional assistant tail with canonical ordered blocks."""
+        """Replace only the provisional assistant tail with canonical ordered blocks.
+
+        仅用规范的有序块替换临时助手消息尾部。
+        """
         should_follow = self._should_follow_output
         for widget in tuple(self._active_message_widgets):
             if widget.parent is self:
@@ -1537,7 +1758,10 @@ class TranscriptView(VerticalScroll):
 
     @property
     def lines(self) -> tuple[TranscriptLine, ...]:
-        """Compatibility text view for tests and lightweight transcript inspection."""
+        """Compatibility text view for tests and lightweight transcript inspection.
+
+        用于测试和轻量对话记录检查的兼容文本视图。
+        """
         messages = [
             child
             for child in self.children
@@ -1551,7 +1775,10 @@ class TranscriptView(VerticalScroll):
 
 
 def _identity_index(items: Sequence[ChatItem], target: ChatItem) -> int | None:
-    """Return an item's identity-based index with an O(1) append-path fast path."""
+    """Return an item's identity-based index with an O(1) append-path fast path.
+
+    返回项目基于对象身份的索引，并为追加路径提供 O(1) 快速路径。
+    """
     if items and items[-1] is target:
         return len(items) - 1
     for index in range(len(items) - 2, -1, -1):
@@ -1560,6 +1787,7 @@ def _identity_index(items: Sequence[ChatItem], target: ChatItem) -> int | None:
     return None
 
 
+# 判断最后一个对话子组件是否为隐藏思考占位符。
 def _last_transcript_child_is_hidden_thinking_placeholder(children: Sequence[Widget]) -> bool:
     for child in reversed(children):
         if isinstance(child, TranscriptMessageWidget | StreamingTranscriptMessageWidget):
@@ -1570,6 +1798,7 @@ def _last_transcript_child_is_hidden_thinking_placeholder(children: Sequence[Wid
     return False
 
 
+# 根据消息角色和流式状态创建对应的对话组件。
 def _transcript_widget(
     item: ChatItem,
     *,
@@ -1599,7 +1828,10 @@ def transcript_item_selection_text(
     invocation: str | None = None,
     result_markup: str | None = None,
 ) -> str:
-    """Return the plain text represented by a selectable transcript item."""
+    """Return the plain text represented by a selectable transcript item.
+
+    返回可选择对话项目所代表的纯文本。
+    """
     if item.role == "custom":
         return _custom_selection_text(custom_markup, item.text)
     if item.role == "tool" and item.tool_batch_items is not None:
@@ -1607,21 +1839,31 @@ def transcript_item_selection_text(
     if item.role == "tool" and result_markup is not None:
         # A tool-rendered result replaces the generic block: invocation line
         # plus the markup-stripped card.
+
+        # 工具渲染结果会替换通用块：包含调用行和去除标记后的卡片。
         invocation_line = invocation if invocation else item.text
         return f"{invocation_line}\n{_custom_markup_to_text(result_markup).plain}"
     return _visible_chat_text(item, show_tool_results=show_tool_results, invocation=invocation)
 
 
 def _custom_markup_to_text(markup: str) -> Text:
-    """Parse Rich markup safely; fall back to literal text on malformed markup."""
+    """Parse Rich markup safely; fall back to literal text on malformed markup.
+
+    安全解析 Rich 标记；遇到格式错误的标记时回退为字面文本。
+    """
     try:
         return Text.from_markup(markup)
     except Exception:  # noqa: BLE001 - a bad renderer string must never crash the TUI
+
+        # noqa: BLE001 - 错误的渲染器字符串绝不能导致 TUI 崩溃
         return Text(markup)
 
 
 def _custom_selection_text(markup: str | None, raw_text: str) -> str:
-    """Return the plain (markup-stripped) text of a custom item for selection."""
+    """Return the plain (markup-stripped) text of a custom item for selection.
+
+    返回自定义项目供选择使用的纯文本（已去除标记）。
+    """
     if markup is None:
         return raw_text
     return _custom_markup_to_text(markup).plain
@@ -1633,7 +1875,10 @@ def _custom_body_renderable(
     raw_text: str,
     body_style: str,
 ) -> RenderableType:
-    """Render a custom message body from renderer markup, or raw text on fallback."""
+    """Render a custom message body from renderer markup, or raw text on fallback.
+
+    从渲染器标记生成自定义消息正文，回退时则使用原始文本。
+    """
     if markup is None:
         return Text(raw_text, style=body_style, overflow="fold", no_wrap=False)
     text = _custom_markup_to_text(markup)
@@ -1643,7 +1888,10 @@ def _custom_body_renderable(
 
 
 def _split_rich_style_colors(style: str) -> tuple[str | None, str | None]:
-    """Split the foreground/background colors from a simple Rich style string."""
+    """Split the foreground/background colors from a simple Rich style string.
+
+    从简单的 Rich 样式字符串中拆分前景色和背景色。
+    """
     text_style = Style.parse(style)
     foreground = text_style.color.name if text_style.color is not None else None
     background = text_style.bgcolor.name if text_style.bgcolor is not None else None
@@ -1651,7 +1899,10 @@ def _split_rich_style_colors(style: str) -> tuple[str | None, str | None]:
 
 
 def _use_plain_transcript_body(item: ChatItem) -> bool:
-    """Return whether a transcript item can use fast selectable plain text."""
+    """Return whether a transcript item can use fast selectable plain text.
+
+    返回对话项目是否可使用快速且可选择的纯文本正文。
+    """
     return item.highlight in {"alert", "update"} or item.role in {
         "user",
         "tool",
@@ -1670,7 +1921,10 @@ def _transcript_plain_body_text(
     invocation: str | None = None,
     result_markup: str | None = None,
 ) -> RenderableType:
-    """Return styled transcript text for selectable plain rows."""
+    """Return styled transcript text for selectable plain rows.
+
+    返回供可选择纯文本行使用的带样式对话文本。
+    """
     if item.role != "tool":
         return Text(text, style=body_style, overflow="fold", no_wrap=False)
     if item.tool_batch_items is not None:
@@ -1692,6 +1946,9 @@ def _transcript_plain_body_text(
     if result_markup is not None:
         # The tool's `render_result` markup replaces the generic result block;
         # the invocation line keeps its usual status-accented rendering.
+
+        # 工具的 `render_result` 标记会替换通用结果块；调用行仍保留通常的
+        # 状态强调渲染。
         markup_text = _custom_markup_to_text(result_markup)
         markup_text.overflow = "fold"
         markup_text.no_wrap = False
@@ -1728,7 +1985,10 @@ def _render_transcript_tool_invocation(
     accent_style: str | None,
     description_only: bool = False,
 ) -> Text:
-    """Render tool descriptions in status color and argument details in gray."""
+    """Render tool descriptions in status color and argument details in gray.
+
+    使用状态颜色渲染工具描述，并使用灰色渲染参数详情。
+    """
     return _styled_tool_invocation(
         text,
         body_style=body_style,
@@ -1743,7 +2003,10 @@ def _transcript_item_markdown(
     show_tool_results: bool,
     invocation: str | None = None,
 ) -> str:
-    """Return Markdown for a transcript item using native Textual Markdown blocks."""
+    """Return Markdown for a transcript item using native Textual Markdown blocks.
+
+    使用原生 Textual Markdown 块返回对话项目的 Markdown。
+    """
     visible_text = _visible_chat_text(
         item, show_tool_results=show_tool_results, invocation=invocation
     )
@@ -1780,9 +2043,14 @@ _SYSTEM_PROMPT_URI_AUTOLINK_PATTERN = re.compile(r"<[A-Za-z][A-Za-z0-9+.-]{1,31}
 def _system_prompt_markdown(text: str) -> str:
     """Protect prompt markup tags so Markdown displays them as highlighted code.
 
+    保护提示词中的标记标签，使 Markdown 将其显示为高亮代码。
+
     Tags inside fenced blocks or existing inline code are left untouched. Tags
     containing backticks use a longer code-span delimiter so their source stays
     valid Markdown.
+
+    围栏块或现有内联代码中的标签保持不变。含反引号的标签使用更长的代码
+    区间分隔符，使其源文本仍是有效 Markdown。
     """
     protected_ranges = _system_prompt_protected_ranges(text)
     output: list[str] = []
@@ -1804,7 +2072,10 @@ def _system_prompt_markdown(text: str) -> str:
 
 
 def _system_prompt_protected_ranges(text: str) -> tuple[tuple[int, int], ...]:
-    """Return Markdown ranges that must not be rewritten."""
+    """Return Markdown ranges that must not be rewritten.
+
+    返回不得改写的 Markdown 范围。
+    """
     block_ranges = [
         *_system_prompt_fenced_ranges(text),
         *_system_prompt_indented_code_ranges(text),
@@ -1818,7 +2089,10 @@ def _system_prompt_protected_ranges(text: str) -> tuple[tuple[int, int], ...]:
 
 
 def _system_prompt_fenced_ranges(text: str) -> tuple[tuple[int, int], ...]:
-    """Find fenced Markdown blocks, including unterminated blocks."""
+    """Find fenced Markdown blocks, including unterminated blocks.
+
+    查找 Markdown 围栏块，包括未终止的块。
+    """
     ranges: list[tuple[int, int]] = []
     offset = 0
     fence_start: int | None = None
@@ -1848,6 +2122,7 @@ def _system_prompt_fenced_ranges(text: str) -> tuple[tuple[int, int], ...]:
     return tuple(ranges)
 
 
+# 判断当前行是否为符合字符和最小长度要求的围栏结束行。
 def _is_system_prompt_fence_close(
     line: str,
     *,
@@ -1862,7 +2137,10 @@ def _is_system_prompt_fence_close(
 
 
 def _system_prompt_indented_code_ranges(text: str) -> tuple[tuple[int, int], ...]:
-    """Find lines belonging to indented Markdown code blocks."""
+    """Find lines belonging to indented Markdown code blocks.
+
+    查找属于缩进式 Markdown 代码块的行。
+    """
     ranges: list[tuple[int, int]] = []
     offset = 0
     for line in text.splitlines(keepends=True):
@@ -1873,7 +2151,10 @@ def _system_prompt_indented_code_ranges(text: str) -> tuple[tuple[int, int], ...
 
 
 def _system_prompt_uri_autolink_ranges(text: str) -> tuple[tuple[int, int], ...]:
-    """Find CommonMark URI autolinks, including schemes without ``//``."""
+    """Find CommonMark URI autolinks, including schemes without ``//``.
+
+    查找 CommonMark URI 自动链接，包括不含 ``//`` 的协议。
+    """
     return tuple(
         (match.start(), match.end()) for match in _SYSTEM_PROMPT_URI_AUTOLINK_PATTERN.finditer(text)
     )
@@ -1883,7 +2164,10 @@ def _system_prompt_inline_code_ranges(
     text: str,
     block_ranges: Sequence[tuple[int, int]],
 ) -> tuple[tuple[int, int], ...]:
-    """Find inline backtick code spans outside Markdown code blocks."""
+    """Find inline backtick code spans outside Markdown code blocks.
+
+    查找 Markdown 代码块之外的内联反引号代码区间。
+    """
     ranges: list[tuple[int, int]] = []
     position = 0
     while position < len(text):
@@ -1911,6 +2195,7 @@ def _system_prompt_inline_code_ranges(
     return tuple(ranges)
 
 
+# 在避开受保护块的同时查找长度匹配的反引号结束分隔符。
 def _find_backtick_closer(
     text: str,
     *,
@@ -1934,6 +2219,7 @@ def _find_backtick_closer(
     return None
 
 
+# 返回从指定位置开始的连续反引号之后的位置。
 def _backtick_run_end(text: str, start: int) -> int:
     end = start
     while end < len(text) and text[end] == "`":
@@ -1941,6 +2227,7 @@ def _backtick_run_end(text: str, start: int) -> int:
     return end
 
 
+# 若位置位于任一受保护范围内，则返回覆盖该位置的最远结束点。
 def _protected_range_end(
     position: int,
     ranges: Sequence[tuple[int, int]],
@@ -1954,30 +2241,39 @@ def _protected_range_end(
     return protected_end
 
 
+# 判断指定位置是否落在任一受保护范围内。
 def _position_in_ranges(position: int, ranges: Sequence[tuple[int, int]]) -> bool:
     return _protected_range_end(position, ranges) is not None
 
 
 def _plain_markdown(text: str) -> str:
-    """Represent arbitrary plain text as wrapping Markdown paragraphs."""
+    """Represent arbitrary plain text as wrapping Markdown paragraphs.
+
+    将任意纯文本表示为可换行的 Markdown 段落。
+    """
     if not text:
         return ""
     return "\n".join(_escape_plain_markdown_line(line) for line in text.splitlines())
 
 
 def _escape_plain_markdown_line(line: str) -> str:
-    """Escape Markdown syntax while preserving plain, wrapping text."""
+    """Escape Markdown syntax while preserving plain, wrapping text.
+
+    转义 Markdown 语法，同时保留纯文本及其换行能力。
+    """
     escaped = line.replace("\\", "\\\\")
     for character in "`*_{}[]()#+-.!|>":
         escaped = escaped.replace(character, f"\\{character}")
     return escaped
 
 
+# 从裁剪到文本边界内的选择范围提取文本。
 def _extract_text_selection(text: str, selection: Selection) -> str:
     clipped_selection = _clip_selection_to_text(selection, text)
     return clipped_selection.extract(text)
 
 
+# 将选择范围的起止位置限制在实际文本行列之内。
 def _clip_selection_to_text(selection: Selection, text: str) -> Selection:
     lines = text.splitlines()
     if not lines:
@@ -1988,6 +2284,7 @@ def _clip_selection_to_text(selection: Selection, text: str) -> Selection:
     )
 
 
+# 将单个选择偏移裁剪到有效的行号和列号范围。
 def _clip_selection_offset(offset: Offset | None, lines: list[str]) -> Offset | None:
     if offset is None:
         return None
@@ -2009,7 +2306,10 @@ def render_session_sidebar(
     *,
     theme: TuiTheme = TAU_DARK_THEME,
 ) -> RenderableType:
-    """Render a static summary of the active coding session."""
+    """Render a static summary of the active coding session.
+
+    渲染当前编码会话的静态摘要。
+    """
     content = _build_sidebar_content(session, theme=theme)
     sections = (
         *content.summary_sections,
@@ -2025,7 +2325,10 @@ def _build_sidebar_content(
     *,
     theme: TuiTheme,
 ) -> _SidebarContent:
-    """Build shared sidebar renderables for static and interactive views."""
+    """Build shared sidebar renderables for static and interactive views.
+
+    为静态视图和交互视图构建共享的侧栏可渲染对象。
+    """
     title = Text(session.session_title or "Untitled session", style=f"bold {theme.accent}")
     stats = session.session_stats
     activity = Text(
@@ -2098,6 +2401,7 @@ def _build_sidebar_content(
     )
 
 
+# 在相邻侧栏区段之间插入主题分隔线。
 def _separate_sidebar_sections(
     sections: Sequence[RenderableType],
     *,
@@ -2117,16 +2421,23 @@ def _sidebar_section(
     *,
     theme: TuiTheme,
 ) -> RenderableType:
-    """Render one sidebar section without a surrounding border."""
+    """Render one sidebar section without a surrounding border.
+
+    渲染一个不带外围边框的侧栏区段。
+    """
     header = Text(title, style=f"bold {theme.prompt_text}")
     return Group(Padding(header, (0, 0, 0, 1)), Padding(body, (0, 0, 0, 1)))
 
 
 def _sidebar_separator(*, theme: TuiTheme) -> RenderableType:
-    """Render a spaced divider between adjacent sidebar sections."""
+    """Render a spaced divider between adjacent sidebar sections.
+
+    渲染相邻侧栏区段之间带间距的分隔线。
+    """
     return Padding(Rule(style=theme.border), (0, 0, 1, 0))
 
 
+# 渲染居中的 Tau 标识及当前版本号。
 def _sidebar_brand(*, theme: TuiTheme) -> RenderableType:
     brand = Text(style=f"bold {theme.prompt_text}")
     brand.append(TAU_SIDEBAR_LOGO)
@@ -2139,7 +2450,10 @@ def render_compact_session_info(
     *,
     theme: TuiTheme = TAU_DARK_THEME,
 ) -> RenderableType:
-    """Render the session facts below the prompt."""
+    """Render the session facts below the prompt.
+
+    在提示词下方渲染会话信息。
+    """
     left = _styled_cwd(session.cwd, theme=theme)
     right = Text(style=theme.muted_text, overflow="fold", no_wrap=False, justify="right")
     right.append(session.provider_name, style=theme.completion_description)
@@ -2165,7 +2479,10 @@ def render_chat_item(
     show_tool_results: bool = False,
     custom_markup: str | None = None,
 ) -> RenderableType:
-    """Render a chat item as a standalone Toad-inspired transcript block."""
+    """Render a chat item as a standalone Toad-inspired transcript block.
+
+    将聊天项目渲染为独立的 Toad 风格对话记录块。
+    """
     role_style = _chat_item_role_style(item, theme)
     if item.role == "custom":
         body: RenderableType = _custom_body_renderable(
@@ -2202,6 +2519,7 @@ def render_chat_item(
     return Padding(table, (1, 1, 1, 0), style=role_style.body)
 
 
+# 根据高亮状态、角色及工具结果选择聊天项目的角色样式。
 def _chat_item_role_style(item: ChatItem, theme: TuiTheme) -> TuiRoleStyle:
     if item.highlight == "alert":
         return TuiRoleStyle(border=theme.error, body=f"bold {theme.error}")
@@ -2215,9 +2533,13 @@ def _chat_item_role_style(item: ChatItem, theme: TuiTheme) -> TuiRoleStyle:
     return theme.role_styles[item.role]
 
 
+# 根据工具运行状态选择调用描述的强调色。
 def _tool_accent_style(item: ChatItem, *, theme: TuiTheme) -> str | None:
     # Bare colors: the accent span inherits its background from the tool body
     # style, so it blends with any theme's transcript background.
+
+    # 使用纯颜色：强调区间从工具正文样式继承背景，因此可与任意主题的
+    # 对话记录背景融合。
     if item.role != "tool":
         return None
     if item.tool_result_text is None or item.tool_result_text.startswith("…"):
@@ -2229,10 +2551,12 @@ def _tool_accent_style(item: ChatItem, *, theme: TuiTheme) -> str | None:
     return None
 
 
+# 判断 Bash 工具行是否只有面向用户的描述而没有命令详情。
 def _bash_row_is_description_only(item: ChatItem) -> bool:
     return item.tool_name == "bash" and item.text.startswith("→ ")
 
 
+# 根据展开状态组合工具批次中单行的调用文本、命令和结果。
 def _tool_batch_row_invocation(row: ChatItem, *, expanded: bool) -> str:
     if row.grouped_tool_calls is not None:
         if expanded:
@@ -2267,6 +2591,7 @@ def _tool_batch_row_invocation(row: ChatItem, *, expanded: bool) -> str:
     return invocation
 
 
+# 将工具批次的各行合并为供文本选择使用的纯文本。
 def _tool_batch_selection_text(item: ChatItem, *, expanded: bool) -> str:
     rows: list[str] = []
     for row in item.tool_batch_items or []:
@@ -2286,7 +2611,10 @@ def _render_transcript_tool_batch(
     theme: TuiTheme,
     expanded: bool,
 ) -> Text:
-    """Render a batch as one selectable Text value with per-row style spans."""
+    """Render a batch as one selectable Text value with per-row style spans.
+
+    将一个批次渲染为单个可选择的 Text 值，并为各行应用独立样式区间。
+    """
     rendered = Text(style=body_style, overflow="fold", no_wrap=False)
     for index, row in enumerate(item.tool_batch_items or []):
         if index:
@@ -2307,6 +2635,7 @@ def _render_transcript_tool_batch(
     return rendered
 
 
+# 渲染工具消息正文，并在展开时附加批次或工具结果。
 def _render_tool_chat_body(
     item: ChatItem,
     *,
@@ -2342,6 +2671,7 @@ def _render_tool_chat_body(
     return Group(text, Text(""), result_body)
 
 
+# 将一条工具调用文本转换为带状态强调的 Rich 文本。
 def _render_tool_invocation(
     text: str,
     *,
@@ -2363,6 +2693,7 @@ _TOOL_GROUP_INVOCATION_PATTERN = re.compile(
 )
 
 
+# 逐行设置工具调用的前缀、描述和详情样式。
 def _styled_tool_invocation(
     text: str,
     *,
@@ -2387,7 +2718,10 @@ def _styled_tool_invocation(
 def _split_tool_invocation_sections(
     text: str, *, description_only: bool = False
 ) -> tuple[str, str, str]:
-    """Split an invocation into neutral prefix, status description, and gray details."""
+    """Split an invocation into neutral prefix, status description, and gray details.
+
+    将调用拆分为中性前缀、状态描述和灰色详情。
+    """
     if description_only and text.startswith("→ "):
         return "→ ", text[2:], ""
     group = _TOOL_GROUP_INVOCATION_PATTERN.fullmatch(text)
@@ -2404,6 +2738,7 @@ def _split_tool_invocation_sections(
     return "", "", text
 
 
+# 根据角色、展开状态和实时结果计算用户当前可见的聊天文本。
 def _visible_chat_text(
     item: ChatItem,
     *,
@@ -2432,6 +2767,7 @@ def _visible_chat_text(
     return text
 
 
+# 按消息角色选择补丁、Markdown、围栏代码或普通文本渲染路径。
 def _render_chat_body(
     text: str,
     *,
@@ -2476,6 +2812,7 @@ def _render_chat_body(
     return _plain_text(text, body_style=body_style)
 
 
+# 识别工具输出中的补丁段，并将其渲染为 diff 语法块。
 def _render_patch_body(
     text: str,
     *,
@@ -2502,19 +2839,25 @@ def _render_patch_body(
 
 
 class ThemedCodeBlock(CodeBlock):
-    """Rich Markdown code block with Tau's themed background color."""
+    """Rich Markdown code block with Tau's themed background color.
+
+    使用 Tau 主题背景色的 Rich Markdown 代码块。
+    """
 
     @classmethod
+    # 从 Markdown 令牌中读取语言和主题，创建对应的代码块实例。
     def create(cls, markdown: Markdown, token: Any) -> ThemedCodeBlock:
         node_info = token.info or ""
         lexer_name = node_info.partition(" ")[0]
         code_block_background = getattr(markdown, "code_block_background", "default")
         return cls(lexer_name or "text", markdown.code_theme, code_block_background)
 
+    # 初始化语法高亮语言、主题和代码块背景色。
     def __init__(self, lexer_name: str, theme: str, code_block_background: str) -> None:
         super().__init__(lexer_name, theme)
         self.code_block_background = code_block_background
 
+    # 向 Rich 控制台输出带主题背景的语法高亮代码。
     def __rich_console__(self, console: Console, options: Any) -> Any:
         code = str(self.text).rstrip()
         yield Syntax(
@@ -2528,7 +2871,10 @@ class ThemedCodeBlock(CodeBlock):
 
 
 class LeftAlignedMarkdownHeading(Heading):
-    """Rich Markdown heading that keeps all heading levels left-aligned."""
+    """Rich Markdown heading that keeps all heading levels left-aligned.
+
+    使所有标题级别保持左对齐的 Rich Markdown 标题。
+    """
 
     LEVEL_ALIGN: ClassVar[dict[str, Literal["default", "left", "center", "right", "full"]]] = {
         "h1": "left",
@@ -2541,7 +2887,10 @@ class LeftAlignedMarkdownHeading(Heading):
 
 
 class ThemedMarkdown(Markdown):
-    """Markdown renderer with Tau's softer heading/accent colors."""
+    """Markdown renderer with Tau's softer heading/accent colors.
+
+    使用 Tau 柔和标题色和强调色的 Markdown 渲染器。
+    """
 
     elements = {
         **Markdown.elements,
@@ -2550,6 +2899,7 @@ class ThemedMarkdown(Markdown):
         "code_block": ThemedCodeBlock,
     }
 
+    # 初始化所有 Markdown 元素的 Tau 主题样式配置。
     def __init__(
         self,
         markup: str,
@@ -2577,6 +2927,7 @@ class ThemedMarkdown(Markdown):
         self.table_border_style = table_border_style
         self.code_block_background = code_block_background
 
+    # 在临时安装 Tau Markdown 主题后把内容输出到 Rich 控制台。
     def __rich_console__(self, console: Console, options: Any) -> Any:
         with console.use_theme(
             _markdown_theme(
@@ -2591,14 +2942,17 @@ class ThemedMarkdown(Markdown):
             yield from super().__rich_console__(console, options)
 
 
+# 返回 Markdown 标题使用的主题高亮样式。
 def _markdown_highlight_style(theme: TuiTheme) -> str:
     return theme.markdown_heading
 
 
+# 返回 Markdown 内联代码使用的主题样式。
 def _markdown_inline_code_style(theme: TuiTheme) -> str:
     return theme.markdown_inline_code
 
 
+# 根据各元素颜色构造 Rich Markdown 主题。
 def _markdown_theme(
     heading_style: str,
     inline_code_style: str,
@@ -2634,6 +2988,7 @@ def _markdown_theme(
     )
 
 
+# 将完整的围栏代码块与普通文本拆分并渲染为组合内容。
 def _render_fenced_body(
     text: str,
     *,
@@ -2681,6 +3036,7 @@ def _render_fenced_body(
     return Group(*renderables) if renderables else None
 
 
+# 将非空普通文本追加为可换行的 Rich 文本。
 def _append_plain(
     renderables: list[RenderableType],
     text: str,
@@ -2691,10 +3047,12 @@ def _append_plain(
         renderables.append(_plain_text(text.rstrip("\n"), body_style=body_style))
 
 
+# 创建允许折行的正文样式 Rich 文本。
 def _plain_text(text: str, *, body_style: str) -> Text:
     return Text(text, style=body_style, overflow="fold", no_wrap=False)
 
 
+# 格式化已用上下文令牌数与有效上限。
 def _context_usage(session: SessionSummarySource) -> str:
     threshold = session.auto_compact_token_threshold
     limit = session.context_window_tokens if threshold is None or threshold <= 0 else threshold
@@ -2707,7 +3065,10 @@ def _context_usage(session: SessionSummarySource) -> str:
 
 
 def _styled_cwd(cwd: Path, *, theme: TuiTheme) -> Text:
-    """Style the parent path as metadata while emphasizing the working directory."""
+    """Style the parent path as metadata while emphasizing the working directory.
+
+    将父路径设为元数据样式，同时突出显示工作目录。
+    """
     short_path = _short_path(cwd)
     parent, separator, name = short_path.rpartition("/")
     text = Text(overflow="fold", no_wrap=False)
@@ -2720,6 +3081,7 @@ def _styled_cwd(cwd: Path, *, theme: TuiTheme) -> Text:
     return text
 
 
+# 将毫秒值格式化为紧凑的毫秒或秒字符串。
 def _format_milliseconds(value: float) -> str:
     rounded = round(value)
     if rounded < 1000:
@@ -2727,6 +3089,7 @@ def _format_milliseconds(value: float) -> str:
     return f"{rounded / 1000:.1f}s"
 
 
+# 将令牌数量格式化为紧凑的千令牌表示。
 def _compact_token_count(value: int) -> str:
     if value <= 0:
         return "0k"
@@ -2735,6 +3098,7 @@ def _compact_token_count(value: int) -> str:
     return f"{(value + 500) // 1000}k"
 
 
+# 将项目上下文文件转换为相对当前目录的显示标签。
 def _context_file_labels(
     context_files: Sequence[ProjectContextFile],
     *,
@@ -2743,6 +3107,7 @@ def _context_file_labels(
     return [_context_file_label(Path(context_file.path), cwd=cwd) for context_file in context_files]
 
 
+# 优先生成相对工作目录的文件标签，失败时回退为缩短的绝对路径。
 def _context_file_label(path: Path, *, cwd: Path) -> str:
     expanded_path = path.expanduser()
     if not expanded_path.is_absolute():
@@ -2757,6 +3122,7 @@ def _context_file_label(path: Path, *, cwd: Path) -> str:
         return _short_path(absolute_path)
 
 
+# 从会话显式配置或内部状态中解析当前思考等级。
 def _thinking_level(session: SessionSummarySource) -> str | None:
     available = getattr(session, "available_thinking_levels", None)
     if available == ():
@@ -2769,6 +3135,7 @@ def _thinking_level(session: SessionSummarySource) -> str | None:
     return str(thinking_level) if thinking_level else "--"
 
 
+# 在短超时内读取工作目录所属的 Git 分支。
 def _git_branch(cwd: Path) -> str:
     try:
         result = run(
@@ -2788,16 +3155,19 @@ def _git_branch(cwd: Path) -> str:
     return "--"
 
 
+# 判断文本中的 Markdown 围栏数量是否表明存在未关闭围栏。
 def _has_unclosed_fence(text: str) -> bool:
     fence_count = sum(1 for line in text.splitlines() if line.startswith("```"))
     return fence_count % 2 == 1
 
 
+# 从围栏信息字符串中提取语言名称，并默认使用纯文本。
 def _fence_language(raw: str) -> str:
     language = raw.strip().split(maxsplit=1)[0] if raw.strip() else ""
     return language or "text"
 
 
+# 验证语法高亮语言是否存在，不存在时回退为纯文本。
 def _syntax_language(raw: str) -> str:
     language = _fence_language(raw)
     if language == "text":
@@ -2814,7 +3184,10 @@ def render_completion_suggestions(
     *,
     theme: TuiTheme = TAU_DARK_THEME,
 ) -> RenderableType:
-    """Render prompt completion suggestions in aligned command/description columns."""
+    """Render prompt completion suggestions in aligned command/description columns.
+
+    在对齐的命令列和描述列中渲染提示词补全建议。
+    """
     table = Table.grid(expand=True)
     table.add_column(no_wrap=True)
     table.add_column(ratio=1)
@@ -2847,6 +3220,7 @@ class _LineLimitedCommaList:
     empty: str
     style: str
 
+    # 在行数预算内逐项渲染列表，并提示被隐藏的剩余项目数。
     def __rich_console__(
         self,
         console: Console,
@@ -2879,6 +3253,7 @@ class _LineLimitedCommaList:
             text.append(f"...({hidden_count} more)", style=self.style)
         yield text
 
+    # 将已换行文本裁剪到侧栏行数预算，并以省略号标记截断。
     def _truncate_to_line_budget(self, text: Text, *, console: Console, width: int) -> Text:
         wrapped_lines = list(text.wrap(console, width))
         visible_lines = [line.copy() for line in wrapped_lines[:SIDEBAR_COMMA_LIST_MAX_LINES]]
@@ -2888,6 +3263,7 @@ class _LineLimitedCommaList:
             last_line.append("…", style=self.style)
         return Text("\n").join(visible_lines)
 
+    # 将项目序列连接成可折行的逗号分隔 Rich 文本。
     def _text(self, items: Sequence[str]) -> Text:
         return Text(
             ", ".join(items),
@@ -2897,6 +3273,7 @@ class _LineLimitedCommaList:
         )
 
 
+# 创建受侧栏最大行数限制的逗号分隔列表。
 def _comma_list(
     items: Sequence[str],
     *,
@@ -2910,6 +3287,7 @@ def _comma_list(
     )
 
 
+# 将数量格式化为原值、千位或百万位的紧凑形式。
 def _compact_usage_count(value: int) -> str:
     if value < 1_000:
         return str(value)
@@ -2918,23 +3296,29 @@ def _compact_usage_count(value: int) -> str:
     return f"{value / 1_000_000:.1f}".rstrip("0").rstrip(".") + "m"
 
 
+# 按金额大小格式化估算成本的小数位。
 def _format_cost(value: float) -> str:
     if 0 < value < 0.01:
         return f"${value:.3f}"
     return f"${value:.2f}"
 
 
+# 根据数量返回单数或复数形式。
 def _plural(count: int, singular: str) -> str:
     return singular if count == 1 else f"{singular}s"
 
 
 def _replace_sidebar_file_widgets(container: Vertical, widgets: Sequence[Widget]) -> None:
-    """Replace a sidebar file list after its session-resource fingerprint changed."""
+    """Replace a sidebar file list after its session-resource fingerprint changed.
+
+    在会话资源指纹变化后替换侧栏文件列表。
+    """
     container.remove_children()
     if widgets:
         container.mount(*widgets)
 
 
+# 为上下文文件创建可打开的侧栏项目，并补充溢出或空状态提示。
 def _context_file_widgets(
     context_files: Sequence[ProjectContextFile],
     *,
@@ -2966,6 +3350,7 @@ def _context_file_widgets(
     return widgets
 
 
+# 按来源对技能分组，并生成对应的侧栏文件组件。
 def _skill_file_widgets(
     skills: Sequence[Skill],
     *,
@@ -2979,6 +3364,7 @@ def _skill_file_widgets(
     return _grouped_sidebar_file_widgets(grouped, cwd=cwd, kind="Skill", theme=theme)
 
 
+# 按来源对提示词模板分组，并生成对应的侧栏文件组件。
 def _prompt_file_widgets(
     templates: Sequence[PromptTemplate],
     *,
@@ -2992,6 +3378,7 @@ def _prompt_file_widgets(
     return _grouped_sidebar_file_widgets(grouped, cwd=cwd, kind="Prompt", theme=theme)
 
 
+# 将分组后的技能或提示词模板转换为带来源标题的侧栏组件。
 def _grouped_sidebar_file_widgets[SidebarResource: (Skill, PromptTemplate)](
     grouped: dict[str, list[SidebarResource]],
     *,
@@ -3027,6 +3414,7 @@ def _grouped_sidebar_file_widgets[SidebarResource: (Skill, PromptTemplate)](
     return widgets
 
 
+# 根据 Tau 与 agents 目录的优先级生成资源来源排序键。
 def _resource_origin_sort_key(origin: str) -> tuple[int, str]:
     precedence = {
         "~/.tau/skills": 0,
@@ -3041,6 +3429,7 @@ def _resource_origin_sort_key(origin: str) -> tuple[int, str]:
     return precedence.get(origin, len(precedence)), origin
 
 
+# 将侧栏资源路径解析为基于工作目录的绝对路径。
 def _absolute_sidebar_path(path: Path, *, cwd: Path) -> Path:
     expanded = path.expanduser()
     if not expanded.is_absolute():
@@ -3048,6 +3437,7 @@ def _absolute_sidebar_path(path: Path, *, cwd: Path) -> Path:
     return expanded.absolute()
 
 
+# 按来源分组技能名称，并标记禁止模型调用的技能。
 def _grouped_skill_list(
     skills: Sequence[Skill],
     *,
@@ -3065,6 +3455,7 @@ def _grouped_skill_list(
     return _grouped_resource_names(grouped, directory="skills", theme=theme)
 
 
+# 按来源分组提示词模板名称。
 def _grouped_prompt_list(
     templates: Sequence[PromptTemplate],
     *,
@@ -3081,6 +3472,7 @@ def _grouped_prompt_list(
     return _grouped_resource_names(grouped, directory="prompts", theme=theme)
 
 
+# 按约定来源顺序渲染分组资源名称及其项目符号。
 def _grouped_resource_names(
     grouped: dict[str, list[tuple[str, bool]]],
     *,
@@ -3094,6 +3486,9 @@ def _grouped_resource_names(
     }
     # The remaining origin is the configurable user Tau home. Its rendered
     # path may be ~/.tau, another path beneath ~, or an absolute path.
+
+    # 剩余来源是可配置的用户 Tau 主目录。其渲染路径可能是 ~/.tau、
+    # 主目录下的其他路径或绝对路径。
     ordered_origins = sorted(
         grouped,
         key=lambda origin: (origin_precedence.get(origin, 0), origin),
@@ -3110,6 +3505,7 @@ def _grouped_resource_names(
     return text
 
 
+# 将资源来源优先表示为工作目录相对路径，其次表示为主目录相对路径。
 def _resource_origin_label(origin: Path, *, cwd: Path) -> str:
     expanded_origin = origin.expanduser()
     if not expanded_origin.is_absolute():
@@ -3130,6 +3526,7 @@ def _resource_origin_label(origin: Path, *, cwd: Path) -> str:
         return str(absolute_origin)
 
 
+# 渲染有数量上限的项目符号列表，并显示隐藏项目数。
 def _limited_bullet_list(
     items: Sequence[str],
     *,
@@ -3147,6 +3544,7 @@ def _limited_bullet_list(
     return text
 
 
+# 将字符串序列渲染为逐行项目符号列表。
 def _bullet_list(
     items: Sequence[str],
     *,
@@ -3166,6 +3564,7 @@ def _bullet_list(
     return text
 
 
+# 将主目录下的路径缩写为波浪号形式。
 def _short_path(path: Path) -> str:
     home = Path.home()
     try:

@@ -1,4 +1,7 @@
-"""Environment-based provider configuration helpers."""
+"""Environment-based provider configuration helpers.
+
+基于环境变量配置模型提供者的辅助函数。
+"""
 
 from __future__ import annotations
 
@@ -18,6 +21,10 @@ DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS = 1.0
 # Prompt-cache retention preferences. "short" uses the provider default TTL
 # (5 minutes on Anthropic), "long" requests the 1 hour TTL, and "none" disables
 # cache breakpoints entirely for backends that reject them.
+#
+# 提示词缓存保留时长选项。“short”使用提供者默认的生存时间
+#（Anthropic 上为 5 分钟），“long”请求保留 1 小时，“none”则完全禁用
+# 缓存断点，以兼容不接受缓存断点的后端。
 type CacheRetention = Literal["none", "short", "long"]
 
 CACHE_RETENTION_NONE: CacheRetention = "none"
@@ -27,7 +34,10 @@ CACHE_RETENTION_LONG: CacheRetention = "long"
 
 @dataclass(frozen=True, slots=True)
 class RuntimeProviderAuth:
-    """Request auth resolved immediately before a provider call."""
+    """Request auth resolved immediately before a provider call.
+
+    在调用模型提供者前即时解析的请求认证信息。
+    """
 
     api_key: str
     base_url: str | None = None
@@ -40,7 +50,10 @@ type RuntimeResponseHeadersObserver = Callable[[Mapping[str, str]], None]
 
 @dataclass(frozen=True, slots=True)
 class OpenAICompatibleConfig:
-    """Configuration for an OpenAI-compatible chat completions endpoint."""
+    """Configuration for an OpenAI-compatible chat completions endpoint.
+
+    OpenAI 兼容聊天补全端点的配置。
+    """
 
     api_key: str = field(repr=False)
     base_url: str = DEFAULT_OPENAI_COMPATIBLE_BASE_URL
@@ -67,7 +80,10 @@ class OpenAICompatibleConfig:
 
 @dataclass(frozen=True, slots=True)
 class AnthropicConfig:
-    """Configuration for Anthropic's Messages API."""
+    """Configuration for Anthropic's Messages API.
+
+    Anthropic Messages API 的配置。
+    """
 
     api_key: str
     bearer_auth: bool = False
@@ -99,7 +115,10 @@ def openai_compatible_config_from_env(
     default_max_retries: int = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRIES,
     default_max_retry_delay_seconds: float = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS,
 ) -> OpenAICompatibleConfig:
-    """Load OpenAI-compatible provider configuration from environment variables."""
+    """Load OpenAI-compatible provider configuration from environment variables.
+
+    从环境变量加载 OpenAI 兼容模型提供者的配置。
+    """
     api_key = environ.get(api_key_var)
     if not api_key:
         msg = f"Missing required environment variable: {api_key_var}"
@@ -120,6 +139,10 @@ def openai_compatible_config_from_env(
 
 
 def _timeout_seconds_from_env(name: str, default: float) -> float:
+    """Read and validate a positive timeout value from the environment.
+
+    从环境变量读取并验证一个正数超时值。
+    """
     raw = environ.get(name)
     if raw is None:
         return default
@@ -133,6 +156,10 @@ def _timeout_seconds_from_env(name: str, default: float) -> float:
 
 
 def _non_negative_int_from_env(name: str, default: int) -> int:
+    """Read and validate a non-negative integer from the environment.
+
+    从环境变量读取并验证一个非负整数。
+    """
     raw = environ.get(name)
     if raw is None:
         return default
@@ -146,6 +173,10 @@ def _non_negative_int_from_env(name: str, default: int) -> int:
 
 
 def _non_negative_float_from_env(name: str, default: float) -> float:
+    """Read and validate a non-negative floating-point value from the environment.
+
+    从环境变量读取并验证一个非负浮点数。
+    """
     raw = environ.get(name)
     if raw is None:
         return default

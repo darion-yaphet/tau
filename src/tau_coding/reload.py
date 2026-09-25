@@ -1,4 +1,7 @@
-"""Reload summary types for Tau coding-session resources."""
+"""Reload summary types for Tau coding-session resources.
+
+Tau 编码会话资源的重载摘要类型。
+"""
 
 from __future__ import annotations
 
@@ -7,7 +10,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class ReloadCategorySummary:
-    """Before/after state for one reload category."""
+    """Before/after state for one reload category.
+
+    单个重载类别的前后状态。
+    """
 
     before: int
     after: int
@@ -15,13 +21,19 @@ class ReloadCategorySummary:
 
     @property
     def delta(self) -> int:
-        """Return the count delta for this category."""
+        """Return the count delta for this category.
+
+        返回此类别的数量差值。
+        """
         return self.after - self.before
 
 
 @dataclass(frozen=True, slots=True)
 class CodingReloadSummary:
-    """Summary of a local coding-resource reload."""
+    """Summary of a local coding-resource reload.
+
+    本地编码资源重载的摘要。
+    """
 
     skills: ReloadCategorySummary
     prompt_templates: ReloadCategorySummary

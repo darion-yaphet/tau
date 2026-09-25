@@ -1,4 +1,7 @@
-"""Markdown prompt template loading and rendering."""
+"""Markdown prompt template loading and rendering.
+
+Markdown 提示词模板的加载与渲染。
+"""
 
 from __future__ import annotations
 
@@ -24,13 +27,19 @@ _RESERVED_TEMPLATE_NAMES = frozenset({"prompts", "skills", "tools", "reload"})
 
 
 def is_prompt_template_candidate(path: Path) -> bool:
-    """Return whether a directory entry is eligible for prompt loading."""
+    """Return whether a directory entry is eligible for prompt loading.
+
+    返回目录条目是否符合提示词加载条件。
+    """
     return path.suffix.lower() == ".md" and path.stem.casefold() not in _RESERVED_TEMPLATE_NAMES
 
 
 @dataclass(frozen=True, slots=True)
 class PromptTemplate:
-    """A markdown prompt template resource."""
+    """A markdown prompt template resource.
+
+    一个 Markdown 提示词模板资源。
+    """
 
     name: str
     path: Path
@@ -39,7 +48,10 @@ class PromptTemplate:
 
 
 def load_prompt_templates(paths: TauResourcePaths | None = None) -> list[PromptTemplate]:
-    """Load markdown prompt templates from Tau and `.agents` resource directories."""
+    """Load markdown prompt templates from Tau and `.agents` resource directories.
+
+    从 Tau 和 `.agents` 资源目录加载 Markdown 提示词模板。
+    """
     resource_paths = paths or TauResourcePaths()
     templates_by_name: dict[str, PromptTemplate] = {}
     for prompts_dir in resource_paths.prompts_dirs:
@@ -51,7 +63,10 @@ def load_prompt_templates(paths: TauResourcePaths | None = None) -> list[PromptT
 def load_prompt_templates_with_diagnostics(
     paths: TauResourcePaths | None = None,
 ) -> tuple[list[PromptTemplate], list[ResourceDiagnostic]]:
-    """Load prompt templates and return non-fatal discovery diagnostics."""
+    """Load prompt templates and return non-fatal discovery diagnostics.
+
+    加载提示词模板并返回非致命的发现诊断信息。
+    """
     resource_paths = paths or TauResourcePaths()
     templates_by_name: dict[str, PromptTemplate] = {}
     diagnostics: list[ResourceDiagnostic] = []
@@ -76,7 +91,10 @@ def load_prompt_templates_with_diagnostics(
 
 
 def parse_prompt_template_arguments(text: str) -> list[str]:
-    """Parse prompt invocation arguments using Pi's simple quote rules."""
+    """Parse prompt invocation arguments using Pi's simple quote rules.
+
+    使用 Pi 的简单引号规则解析提示词调用参数。
+    """
     arguments: list[str] = []
     current: list[str] = []
     quote: str | None = None
@@ -102,10 +120,17 @@ def parse_prompt_template_arguments(text: str) -> list[str]:
 
 
 def substitute_prompt_template_args(content: str, arguments: Sequence[str]) -> str:
-    """Substitute Pi-compatible positional and aggregate prompt arguments."""
+    """Substitute Pi-compatible positional and aggregate prompt arguments.
+
+    替换兼容 Pi 的位置参数和聚合提示词参数。
+    """
     all_arguments = " ".join(arguments)
 
     def replace(match: re.Match[str]) -> str:
+        """Resolve one Pi-compatible argument placeholder.
+
+        解析一个兼容 Pi 的参数占位符。
+        """
         default_target = match.group(1)
         if default_target is not None:
             default_value = match.group(2) or ""
@@ -141,12 +166,21 @@ def render_prompt_template(
 ) -> str:
     """Render a prompt template using `{{ variable }}` placeholders.
 
+    使用 `{{ variable }}` 占位符渲染提示词模板。
+
     By default, missing variables raise `ResourceError`. Callers that treat
     templates as user-facing shortcuts can pass `missing` to render absent
     variables as a fallback string instead.
+
+    默认情况下，缺少变量会抛出 `ResourceError`。将模板作为面向用户快捷方式
+    的调用方，可以传入 `missing`，以便用后备字符串渲染缺失变量。
     """
 
     def replace(match: re.Match[str]) -> str:
+        """Resolve one named template variable.
+
+        解析一个具名模板变量。
+        """
         name = match.group(1)
         value = variables.get(name)
         if value is None:
@@ -164,11 +198,18 @@ def expand_prompt_template_command(
 ) -> str | None:
     """Expand `/name [arguments]` text with a loaded prompt template.
 
+    使用已加载的提示词模板展开 `/name [arguments]` 文本。
+
     Template names are matched by markdown filename stem. Invocation arguments use
     Pi-compatible `$1`, `$2`, `$@`, and `$ARGUMENTS` placeholders, including default
     values and simple slices. Legacy `{{ arguments }}` and `{{ args }}` placeholders
     remain supported. If a template has no argument placeholder, arguments are
     appended after a blank line.
+
+    模板名称按 Markdown 文件名主干匹配。调用参数使用兼容 Pi 的 `$1`、`$2`、
+    `$@` 和 `$ARGUMENTS` 占位符，包括默认值和简单切片。仍支持旧版
+    `{{ arguments }}` 和 `{{ args }}` 占位符。如果模板中没有参数占位符，
+    则在一个空行后追加参数。
     """
     stripped = text.strip()
     if not stripped.startswith("/") or stripped.startswith("//") or stripped.startswith("/skill:"):
@@ -196,6 +237,10 @@ def expand_prompt_template_command(
 
 
 def _template_references_arguments(content: str) -> bool:
+    """Return whether template content references invocation arguments.
+
+    返回模板内容是否引用了调用参数。
+    """
     return bool(_PROMPT_ARGUMENT_RE.search(content)) or any(
         match.group(1) in _ARGUMENT_TEMPLATE_VARIABLES
         for match in _TEMPLATE_VARIABLE_RE.finditer(content)
@@ -206,6 +251,10 @@ def _find_prompt_template(
     name: str,
     templates: Sequence[PromptTemplate],
 ) -> PromptTemplate | None:
+    """Find a prompt template by its normalized command name.
+
+    按规范化的命令名称查找提示词模板。
+    """
     normalized_name = name.strip().removeprefix("/").lower()
     for template in templates:
         if template.name.lower() == normalized_name:
@@ -214,6 +263,10 @@ def _find_prompt_template(
 
 
 def _parse_prompt_template_command(text: str) -> tuple[str, str]:
+    """Split a prompt-template command into its name and arguments.
+
+    将提示词模板命令拆分为名称和参数。
+    """
     match = re.match(r"^/([^\s]+)(?:\s+([\s\S]*))?$", text)
     if match is None:
         return "", ""
@@ -221,6 +274,10 @@ def _parse_prompt_template_command(text: str) -> tuple[str, str]:
 
 
 def _load_prompt_templates_from_dir(prompts_dir: Path) -> list[PromptTemplate]:
+    """Load one prompt directory and raise its first diagnostic as an error.
+
+    加载一个提示词目录，并将首条诊断作为错误抛出。
+    """
     templates, diagnostics = _load_prompt_templates_from_dir_with_diagnostics(prompts_dir)
     if diagnostics:
         first = diagnostics[0]
@@ -231,6 +288,10 @@ def _load_prompt_templates_from_dir(prompts_dir: Path) -> list[PromptTemplate]:
 def _load_prompt_templates_from_dir_with_diagnostics(
     prompts_dir: Path,
 ) -> tuple[list[PromptTemplate], list[ResourceDiagnostic]]:
+    """Load templates from one directory with non-fatal diagnostics.
+
+    从一个目录加载模板，并返回非致命诊断信息。
+    """
     if not prompts_dir.exists() or not prompts_dir.is_dir():
         return [], []
 
@@ -279,6 +340,10 @@ def _load_prompt_templates_from_dir_with_diagnostics(
 
 
 def _load_prompt_template(name: str, path: Path) -> PromptTemplate:
+    """Parse one Markdown file into a prompt template resource.
+
+    将一个 Markdown 文件解析为提示词模板资源。
+    """
     raw = path.read_text(encoding="utf-8")
     metadata, content = parse_markdown_resource(raw)
     description = metadata.get("description") or derive_description(content)

@@ -1,4 +1,7 @@
-"""Minimal Tau extension that registers a custom tool."""
+"""Minimal Tau extension that registers a custom tool.
+
+注册自定义工具的最小 Tau 扩展示例。
+"""
 
 from collections.abc import Mapping
 
@@ -19,13 +22,20 @@ async def _run_hello(
     signal: ToolCancellationToken | None = None,
     on_update: ToolUpdateCallback | None = None,
 ) -> AgentToolResult:
+    """Return a greeting for the supplied name.
+
+    返回针对所提供名称的问候语。
+    """
     del tool_call_id, signal, on_update
     who = str(arguments.get("who", "world"))
     return AgentToolResult(content=[TextContent(text=f"Hello, {who}!")])
 
 
 def setup(tau: ExtensionAPI) -> None:
-    """Register the hello tool."""
+    """Register the hello tool.
+
+    注册 hello 工具。
+    """
     tau.register_tool(
         AgentTool(
             name="hello",

@@ -1,4 +1,7 @@
-"""Tau extension system: discovery, loading, and the extension API."""
+"""Tau extension system: discovery, loading, and the extension API.
+
+Tau 扩展系统：发现、加载与扩展 API。
+"""
 
 from tau_coding.extensions.api import (
     AGENT_EVENT_TYPES,

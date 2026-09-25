@@ -1,4 +1,7 @@
-"""Pure Pi-compatible provider/tool agent loop."""
+"""Pure Pi-compatible provider/tool agent loop.
+
+纯 Pi 兼容的模型提供者与工具代理循环。
+"""
 
 from __future__ import annotations
 
@@ -66,7 +69,13 @@ async def run_agent_loop(
     before_tool_call: BeforeToolCall | None = None,
     after_tool_call: AfterToolCall | None = None,
 ) -> AsyncIterator[AgentEvent]:
-    """Run the provider/tool loop and emit Pi-compatible agent events."""
+    """Run the provider/tool loop and emit Pi-compatible agent events.
+
+    运行模型提供者与工具循环，并发出 Pi 兼容的代理事件。
+    """
+    # Initialize this run's message collection and announce its first turn.
+
+    # 初始化本次运行的消息集合，并通知第一轮开始。
     new_messages = list(prompts)
     if prompts:
         messages.extend(prompts)
@@ -122,6 +131,9 @@ async def run_agent_loop(
             # Python async generators cannot pass a yielding callback through a
             # normal await cleanly, so consume the assistant sub-generator and
             # retain its final message through the terminal event.
+
+            # Python 异步生成器无法通过普通 await 干净地传递会产生值的回调，
+            # 因此要消费助手子生成器，并从终止事件中保留其最终消息。
             assistant = None
             async for event in _assistant_events(
                 provider=provider,
@@ -139,6 +151,8 @@ async def run_agent_loop(
                     assistant = event.message
 
             if assistant is None:  # defensive: _assistant_events always terminates
+
+                # 防御性处理：_assistant_events 始终会终止。
                 assistant = _error_message(model, "Provider produced no assistant message")
                 yield MessageStartEvent(message=assistant)
                 yield MessageEndEvent(message=assistant)
@@ -185,9 +199,14 @@ async def run_agent_loop(
 def _provider_context(messages: list[AgentMessage]) -> list[AgentMessage]:
     """Return replayable messages while retaining failures in durable history.
 
+    返回可重放的消息，同时在持久历史中保留失败记录。
+
     Providers cannot consistently accept an assistant turn with no content. Tau
     persists terminal failures for diagnostics, but an empty failed or aborted
     turn is not model context and must not poison the next request.
+
+    模型提供者无法稳定接受内容为空的助手轮次。Tau 会持久化终止失败以便诊断，
+    但空的失败或已中止轮次不属于模型上下文，不应影响下一个请求。
     """
     replayable = tuple(
         message
@@ -211,6 +230,13 @@ async def _assistant_events(
     signal: CancellationToken | None,
     session_id: str | None,
 ) -> AsyncIterator[AgentEvent]:
+    """Translate provider stream events into portable agent message events.
+
+    将模型提供者的流式事件转换为可移植的代理消息事件。
+    """
+    # Open the provider stream and track provider wait time for response metrics.
+
+    # 打开模型提供者事件流，并记录等待时间以生成响应指标。
     source: AsyncIterator[AssistantMessageEvent] = provider.stream_response(
         model=model,
         system=system,
@@ -271,7 +297,10 @@ def _response_timing(
     first_output_elapsed_ns: int | None,
     total_elapsed_ns: int,
 ) -> ResponseTiming:
-    """Build persistable durations from time spent awaiting provider events."""
+    """Build persistable durations from time spent awaiting provider events.
+
+    根据等待模型提供者事件的耗时，构建可持久化的时长数据。
+    """
     return ResponseTiming(
         time_to_first_output_ms=(
             first_output_elapsed_ns // 1_000_000 if first_output_elapsed_ns is not None else None
@@ -287,6 +316,13 @@ async def _execute_tool_call(
     before_tool_call: BeforeToolCall | None,
     after_tool_call: AfterToolCall | None,
 ) -> AsyncIterator[AgentEvent]:
+    """Execute one tool call and emit its progress and result events.
+
+    执行一次工具调用，并发出其进度与结果事件。
+    """
+    # Announce the call, then apply pre-execution policy and cancellation checks.
+
+    # 先通知工具调用开始，再执行调用前策略与取消检查。
     yield ToolExecutionStartEvent(
         tool_call_id=call.id,
         tool_name=call.name,
@@ -319,6 +355,9 @@ async def _execute_tool_call(
                     partial_result=update,
                 )
 
+    # Allow post-execution policy to transform the final result and error state.
+
+    # 允许调用后策略转换最终结果及错误状态。
     if after_tool_call is not None:
         result, is_error = await after_tool_call(call, result, is_error)
 
@@ -345,10 +384,18 @@ async def _run_tool(
     call: ToolCall,
     signal: CancellationToken | None,
 ) -> tuple[AgentToolResult, bool, list[AgentToolResult]]:
+    """Run a tool while collecting immutable snapshots of progress updates.
+
+    运行工具，同时收集进度更新的不可变快照。
+    """
     updates: list[AgentToolResult] = []
     accepting = True
 
     def on_update(partial: AgentToolResult) -> None:
+        """Capture a progress update while the tool call is active.
+
+        在工具调用处于活动状态时捕获进度更新。
+        """
         if accepting:
             updates.append(partial.model_copy(deep=True))
 
@@ -358,16 +405,26 @@ async def _run_tool(
     except asyncio.CancelledError:
         raise
     except Exception as exc:  # noqa: BLE001 - tools are an isolation boundary
+
+        # noqa: BLE001 - 工具是异常隔离边界。
         return _error_result(str(exc)), True, updates
     finally:
         accepting = False
 
 
 def _error_result(message: str) -> AgentToolResult:
+    """Build a standardized error result for a failed tool call.
+
+    为失败的工具调用构建标准化错误结果。
+    """
     return AgentToolResult(content=[TextContent(text=message)], details={})
 
 
 def _error_message(model: str, message: str) -> AssistantMessage:
+    """Build an assistant message that records a terminal error.
+
+    构建一条记录终止错误的助手消息。
+    """
     return AssistantMessage(
         model=model,
         content=[],

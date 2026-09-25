@@ -1,5 +1,9 @@
 # Tau built-in provider catalog, generated from Pi API-provider metadata.
+#
+# Tau 内置提供者目录，由 Pi API 提供者元数据生成。
 # User overrides live in <Tau home>/catalog.toml (default: ~/.tau/catalog.toml).
+#
+# 用户覆盖配置位于 <Tau home>/catalog.toml，默认路径为 ~/.tau/catalog.toml。
 
 schema_version = 1
 
@@ -471,6 +475,9 @@ thinking_parameter = "reasoning.effort"
 [providers.context_windows]
 # Conservative Codex-subscription fallbacks. The authenticated live catalog
 # overrides these values because Codex limits can vary by rollout/account.
+#
+# 保守的 Codex 订阅后备值。由于 Codex 限额会随发布批次或账户而变化，
+# 已认证的实时目录会覆盖这些值。
 "gpt-5.6-sol" = 272000
 "gpt-5.6-terra" = 272000
 "gpt-5.6-luna" = 272000

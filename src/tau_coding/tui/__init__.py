@@ -1,4 +1,7 @@
-"""Textual TUI frontend for Tau coding sessions."""
+"""Textual TUI frontend for Tau coding sessions.
+
+Tau 编码会话的 Textual TUI 前端。
+"""
 
 from __future__ import annotations
 

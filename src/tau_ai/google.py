@@ -1,4 +1,7 @@
-"""Google Generative AI provider."""
+"""Google Generative AI provider.
+
+Google 生成式 AI 提供方。
+"""
 
 from __future__ import annotations
 
@@ -45,8 +48,14 @@ from tau_ai.tool_call_ids import portable_tool_call_id
 
 
 class GoogleGenerativeAIProvider:
-    """Provider adapter for Google's Generative Language streaming API."""
+    """Provider adapter for Google's Generative Language streaming API.
 
+    Google 生成式语言流式 API 的提供方适配器。
+    """
+
+    # Initialize the provider configuration and optional HTTP client.
+    #
+    # 初始化提供方配置和可选的 HTTP 客户端。
     def __init__(
         self,
         config: OpenAICompatibleConfig,
@@ -58,7 +67,10 @@ class GoogleGenerativeAIProvider:
         self._owns_client = client is None
 
     async def aclose(self) -> None:
-        """Close the underlying HTTP client if this provider created it."""
+        """Close the underlying HTTP client if this provider created it.
+
+        如果底层 HTTP 客户端由当前提供方创建，则将其关闭。
+        """
         if self._client is not None and self._owns_client:
             await self._client.aclose()
             self._client = None
@@ -73,7 +85,10 @@ class GoogleGenerativeAIProvider:
         signal: CancellationToken | None = None,
         session_id: str | None = None,
     ) -> AsyncIterator[AssistantMessageEvent]:
-        """Stream one response as Pi-compatible assistant message events."""
+        """Stream one response as Pi-compatible assistant message events.
+
+        将一次响应以兼容 Pi 的助手消息事件形式进行流式传输。
+        """
         del session_id
         raw = self._stream_provider_events(
             model=model, system=system, messages=messages, tools=tools, signal=signal
@@ -91,9 +106,18 @@ class GoogleGenerativeAIProvider:
         tools: list[AgentTool],
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
-        """Stream one Gemini response as provider-neutral events."""
+        """Stream one Gemini response as provider-neutral events.
 
+        将一次 Gemini 响应转换为与提供方无关的事件流。
+        """
+
+        # Run the retrying request and translate Gemini SSE chunks into provider events.
+        #
+        # 执行带重试的请求，并将 Gemini SSE 数据块转换为提供方事件。
         async def iterator() -> AsyncIterator[ProviderEvent]:
+            # Prepare the request payload, endpoint, and headers before streaming.
+            #
+            # 在开始流式传输前准备请求载荷、端点和请求头。
             client = self._get_client()
             payload = _build_google_payload(
                 model=model,
@@ -116,6 +140,9 @@ class GoogleGenerativeAIProvider:
             attempt = 0
             parser = _GoogleStreamParser()
             while True:
+                # Reset parser state for each attempt so retries start cleanly.
+                #
+                # 每次尝试都重置解析器状态，使重试从干净状态开始。
                 parser = _GoogleStreamParser()
                 try:
                     async with client.stream(
@@ -152,6 +179,9 @@ class GoogleGenerativeAIProvider:
                             return
 
                         yield ProviderResponseStartEvent(model=model)
+                        # Parse each SSE line and forward incremental response events.
+                        #
+                        # 解析每一行 SSE，并转发增量响应事件。
                         async for line in response.aiter_lines():
                             if signal is not None and signal.is_cancelled():
                                 return
@@ -206,11 +236,17 @@ class GoogleGenerativeAIProvider:
 
         return iterator()
 
+    # Return the configured HTTP client, creating the owned client lazily.
+    #
+    # 返回已配置的 HTTP 客户端，并按需延迟创建自有客户端。
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
             self._client = create_async_client(timeout=self._config.timeout_seconds)
         return self._client
 
+    # Decide whether another request attempt is allowed for the current failure.
+    #
+    # 判断当前失败是否允许再次尝试请求。
     def _should_retry(self, attempt: int, *, status_code: int | None = None) -> bool:
         if attempt >= self._config.max_retries:
             return False
@@ -218,6 +254,9 @@ class GoogleGenerativeAIProvider:
 
 
 class _GoogleStreamParser:
+    # Initialize accumulators for streamed text, reasoning, tools, and finish state.
+    #
+    # 初始化流式文本、推理、工具和结束状态的累积器。
     def __init__(self) -> None:
         self.emitted_content = False
         self.fatal = False
@@ -227,9 +266,15 @@ class _GoogleStreamParser:
         self._finish_reason: str | None = None
 
     @property
+    # Report whether the provider has supplied a terminal finish reason.
+    #
+    # 返回提供方是否已给出终止原因。
     def has_finish_reason(self) -> bool:
         return self._finish_reason is not None
 
+    # Parse one Gemini SSE payload into incremental provider events.
+    #
+    # 将一个 Gemini SSE 载荷解析为增量提供方事件。
     def feed(self, event: str) -> list[ProviderEvent]:
         chunk = _loads_object(event)
         if chunk is None:
@@ -280,6 +325,9 @@ class _GoogleStreamParser:
                 events.append(ProviderToolCallEvent(tool_call=tool_call))
         return events
 
+    # Assemble accumulated content into the terminal response event.
+    #
+    # 将累积内容组装为终止响应事件。
     def finalize(self) -> list[ProviderEvent]:
         if self._finish_reason is None:
             return [ProviderErrorEvent(message="Google stream ended without finishReason")]
@@ -296,6 +344,9 @@ class _GoogleStreamParser:
         ]
 
 
+# Build a Gemini request payload from model settings, messages, and tools.
+#
+# 根据模型设置、消息和工具构建 Gemini 请求载荷。
 def _build_google_payload(
     *,
     model: str,
@@ -328,6 +379,9 @@ def _build_google_payload(
     return payload
 
 
+# Resolve Gemini thinking configuration for a requested reasoning effort.
+#
+# 根据请求的推理强度解析 Gemini 思考配置。
 def _google_thinking_config(
     model: str, reasoning_effort: str | None
 ) -> dict[str, JSONValue] | None:
@@ -347,6 +401,9 @@ def _google_thinking_config(
     return {"includeThoughts": True, "thinkingBudget": budget}
 
 
+# Map a model and reasoning effort to a Gemini thinking token budget.
+#
+# 将模型和推理强度映射为 Gemini 思考令牌预算。
 def _google_budget(model: str, effort: str) -> int | None:
     normalized = effort.lower()
     if normalized == "xhigh":
@@ -364,6 +421,9 @@ def _google_budget(model: str, effort: str) -> int | None:
     return -1
 
 
+# Map a model and reasoning effort to a Gemini thinking level.
+#
+# 将模型和推理强度映射为 Gemini 思考等级。
 def _google_level(model: str, effort: str) -> str:
     normalized = effort.lower()
     if normalized == "xhigh":
@@ -380,18 +440,30 @@ def _google_level(model: str, effort: str) -> str:
     }.get(normalized, "HIGH")
 
 
+# Return whether a model name identifies Gemini 3 Pro.
+#
+# 返回模型名称是否表示 Gemini 3 Pro。
 def _is_gemini3_pro_model(model: str) -> bool:
     return "gemini-3" in model.lower() and "pro" in model.lower()
 
 
+# Return whether a model name identifies Gemini 3 Flash.
+#
+# 返回模型名称是否表示 Gemini 3 Flash。
 def _is_gemini3_flash_model(model: str) -> bool:
     return "gemini-3" in model.lower() and "flash" in model.lower()
 
 
+# Return whether a model name identifies Gemma 4.
+#
+# 返回模型名称是否表示 Gemma 4。
 def _is_gemma4_model(model: str) -> bool:
     return "gemma-4" in model.lower() or "gemma4" in model.lower()
 
 
+# Convert one agent message into one or more Gemini content entries.
+#
+# 将一条代理消息转换为一个或多个 Gemini 内容条目。
 def _messages_to_google(
     message: AgentMessage, *, model: str, supports_images: bool
 ) -> list[dict[str, JSONValue]]:
@@ -458,15 +530,24 @@ def _messages_to_google(
     )
 
 
+# Convert image content into Gemini's inline-data representation.
+#
+# 将图片内容转换为 Gemini 的内联数据表示形式。
 def _google_image(image: ImageContent) -> dict[str, JSONValue]:
     return {"inlineData": {"mimeType": image.mime_type, "data": image.data}}
 
 
+# Return whether function responses may carry multimodal parts for this model.
+#
+# 返回该模型的函数响应是否可以携带多模态内容部分。
 def _supports_multimodal_function_response(model: str) -> bool:
     normalized = model.lower()
     return not normalized.startswith("gemini-") or normalized.startswith("gemini-3")
 
 
+# Convert an agent tool definition into a Gemini function declaration.
+#
+# 将代理工具定义转换为 Gemini 函数声明。
 def _tool_to_google(tool: AgentTool) -> dict[str, JSONValue]:
     return {
         "name": tool.name,
@@ -479,7 +560,10 @@ _UNSUPPORTED_GOOGLE_SCHEMA_KEYS = frozenset({"additionalProperties", "$schema"})
 
 
 def _sanitize_google_schema(value: JSONValue) -> JSONValue:
-    """Strip JSON Schema keywords Gemini's OpenAPI-subset parser rejects."""
+    """Strip JSON Schema keywords Gemini's OpenAPI-subset parser rejects.
+
+    移除 Gemini 的 OpenAPI 子集解析器不接受的 JSON Schema 关键字。
+    """
     if isinstance(value, dict):
         return {
             key: _sanitize_google_schema(subvalue)
@@ -491,6 +575,9 @@ def _sanitize_google_schema(value: JSONValue) -> JSONValue:
     return value
 
 
+# Extract the data payload from one server-sent event line.
+#
+# 从一行服务器发送事件中提取 data 载荷。
 def _parse_sse_line(line: str) -> str | None:
     line = line.strip()
     if not line or not line.startswith("data:"):
@@ -498,6 +585,9 @@ def _parse_sse_line(line: str) -> str | None:
     return line.removeprefix("data:").strip()
 
 
+# Decode a JSON string only when its top-level value is an object.
+#
+# 仅当 JSON 字符串的顶层值为对象时才返回解码结果。
 def _loads_object(value: str) -> dict[str, JSONValue] | None:
     try:
         loaded = loads(value)
@@ -506,14 +596,23 @@ def _loads_object(value: str) -> dict[str, JSONValue] | None:
     return loaded if isinstance(loaded, dict) else None
 
 
+# Return a nonempty string value or the supplied default.
+#
+# 返回非空字符串值，否则返回给定的默认值。
 def _string_or_default(value: object, default: str) -> str:
     return value if isinstance(value, str) and value else default
 
 
+# Return a dictionary value or an empty dictionary.
+#
+# 返回字典值，否则返回空字典。
 def _object_or_empty(value: object) -> dict[str, JSONValue]:
     return value if isinstance(value, dict) else {}
 
 
+# Normalize Gemini finish reasons to Tau's canonical values.
+#
+# 将 Gemini 的结束原因规范化为 Tau 的标准值。
 def _normalize_finish_reason(reason: str | None, *, has_tool_calls: bool) -> str:
     if has_tool_calls:
         return "tool_calls"

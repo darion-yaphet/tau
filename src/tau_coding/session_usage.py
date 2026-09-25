@@ -1,4 +1,7 @@
-"""Token-usage analytics for Tau sessions, rendered as an HTML dashboard."""
+"""Token-usage analytics for Tau sessions, rendered as an HTML dashboard.
+
+Tau 会话的令牌用量分析，并渲染为 HTML 仪表板。
+"""
 
 from __future__ import annotations
 
@@ -34,7 +37,10 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class RequestUsage:
-    """Token usage for a single assistant response."""
+    """Token usage for a single assistant response.
+
+    单次助手响应的令牌用量。
+    """
 
     number: int
     kind: str
@@ -53,16 +59,27 @@ class RequestUsage:
 
     @property
     def prompt(self) -> int:
+        """Return total prompt tokens for this request.
+
+        返回本次请求的提示词令牌总数。
+        """
         return self.fresh + self.cached + self.cache_write
 
     @property
     def hit_rate(self) -> float:
+        """Return the cache-hit share of prompt tokens.
+
+        返回提示词令牌的缓存命中占比。
+        """
         return self.cached / self.prompt if self.prompt else 0.0
 
 
 @dataclass(frozen=True, slots=True)
 class UsageEvent:
-    """A notable session event positioned against the next model request."""
+    """A notable session event positioned against the next model request.
+
+    相对于下一次模型请求定位的重要会话事件。
+    """
 
     request_number: int
     timestamp: str
@@ -73,7 +90,10 @@ class UsageEvent:
 
 @dataclass(frozen=True, slots=True)
 class SessionUsage:
-    """Aggregated usage for the entries shown in an export."""
+    """Aggregated usage for the entries shown in an export.
+
+    导出内容中所显示条目的聚合用量。
+    """
 
     requests: tuple[RequestUsage, ...]
     tool_calls: tuple[tuple[str, int], ...]
@@ -82,26 +102,50 @@ class SessionUsage:
 
     @property
     def total_fresh(self) -> int:
+        """Return total uncached input tokens.
+
+        返回未缓存输入令牌总数。
+        """
         return sum(item.fresh for item in self.requests)
 
     @property
     def total_cached(self) -> int:
+        """Return total cache-read input tokens.
+
+        返回从缓存读取的输入令牌总数。
+        """
         return sum(item.cached for item in self.requests)
 
     @property
     def total_cache_write(self) -> int:
+        """Return total cache-write input tokens.
+
+        返回写入缓存的输入令牌总数。
+        """
         return sum(item.cache_write for item in self.requests)
 
     @property
     def total_prompt(self) -> int:
+        """Return total prompt input tokens.
+
+        返回提示词输入令牌总数。
+        """
         return self.total_fresh + self.total_cached + self.total_cache_write
 
     @property
     def total_output(self) -> int:
+        """Return total output tokens.
+
+        返回输出令牌总数。
+        """
         return sum(item.output for item in self.requests)
 
     @property
     def hit_rate(self) -> float | None:
+        """Return aggregate cache hit rate when cache activity exists.
+
+        存在缓存活动时返回聚合缓存命中率。
+        """
         if self.total_prompt <= 0:
             return None
         if self.total_cached == 0 and self.total_cache_write == 0:
@@ -110,6 +154,10 @@ class SessionUsage:
 
     @property
     def total_cost(self) -> float | None:
+        """Return the sum of available request cost estimates.
+
+        返回所有可用请求成本估算值之和。
+        """
         costs = [item.estimated_cost for item in self.requests if item.estimated_cost is not None]
         return sum(costs) if costs else None
 
@@ -124,7 +172,10 @@ def estimated_request_cost(
     cache_write_1h: int,
     output: int,
 ) -> float | None:
-    """Estimate a request cost in USD from the built-in provider catalog rates."""
+    """Estimate a request cost in USD from the built-in provider catalog rates.
+
+    根据内置提供者目录费率估算一次请求的美元成本。
+    """
     entry = builtin_provider_entry(provider)
     metadata = entry.model_metadata.get(model) if entry is not None else None
     if metadata is None:
@@ -135,6 +186,9 @@ def estimated_request_cost(
     # cache_write already includes the 1-hour TTL writes; Anthropic bills those at
     # the higher cacheWrite1h rate, falling back to the 5-minute rate when the
     # catalog entry has no cacheWrite1h value.
+    #
+    # cache_write 已包含一小时 TTL 写入；Anthropic 对其采用更高的
+    # cacheWrite1h 费率，目录条目没有该值时回退到五分钟费率。
     return _response_cost(
         input_tokens=fresh,
         output_tokens=output,
@@ -146,7 +200,10 @@ def estimated_request_cost(
 
 
 def collect_session_usage(entries: Sequence[SessionEntry]) -> SessionUsage:
-    """Collect per-request token usage, tool-call counts, and notable events."""
+    """Collect per-request token usage, tool-call counts, and notable events.
+
+    收集每次请求的令牌用量、工具调用次数和重要事件。
+    """
     requests: list[RequestUsage] = []
     tools: dict[str, int] = {}
     compactions = 0
@@ -165,6 +222,10 @@ def collect_session_usage(entries: Sequence[SessionEntry]) -> SessionUsage:
         response_provider: str | None = None,
         stop_reason: str = "-",
     ) -> None:
+        """Append one normalized request and attach pending events to it.
+
+        追加一条规范化请求，并将待处理事件附加到该请求。
+        """
         cache_write_1h = usage.cache_write_1h or 0
         estimated = estimated_request_cost(
             provider,
@@ -285,11 +346,18 @@ def collect_session_usage(entries: Sequence[SessionEntry]) -> SessionUsage:
 
 
 def _entry_time(timestamp: float) -> str:
+    """Format an entry timestamp as UTC clock time.
+
+    将条目时间戳格式化为 UTC 时钟时间。
+    """
     return datetime.fromtimestamp(timestamp, tz=UTC).strftime("%H:%M:%S")
 
 
 def _usage_event(entry: SessionEntry) -> tuple[str, str] | None:
-    """Return chart metadata for session events that can affect prompt usage."""
+    """Return chart metadata for session events that can affect prompt usage.
+
+    为可能影响提示词用量的会话事件返回图表元数据。
+    """
     if isinstance(entry, CompactionEntry):
         return "compaction", "Compaction"
     if isinstance(entry, ModelChangeEntry):
@@ -303,6 +371,8 @@ def _usage_event(entry: SessionEntry) -> tuple[str, str] | None:
 
 _SERIES_COLORS = {
     # Derived from the built-in themes so exported charts cannot drift from them.
+    #
+    # 颜色取自内置主题，避免导出的图表与主题发生偏离。
     "cached": (TAU_DARK_THEME.accent, TAU_LIGHT_THEME.accent),
     "cache writes": (TAU_DARK_THEME.success, TAU_LIGHT_THEME.success),
     "fresh": (TAU_DARK_THEME.error, TAU_LIGHT_THEME.error),
@@ -318,6 +388,10 @@ _SERIES_COLORS = {
 
 
 def _series_color_pair(name: str) -> tuple[str, str]:
+    """Return dark and light theme colors for one chart series.
+
+    返回一条图表序列的深色和浅色主题颜色。
+    """
     return _SERIES_COLORS.get(
         name,
         (TAU_DARK_THEME.markdown_link, TAU_LIGHT_THEME.markdown_link),
@@ -325,6 +399,10 @@ def _series_color_pair(name: str) -> tuple[str, str]:
 
 
 def _compact_number(value: float) -> str:
+    """Format a chart value using compact metric suffixes.
+
+    使用紧凑的数量级后缀格式化图表数值。
+    """
     if value >= 1_000_000:
         return f"{value / 1_000_000:.1f}m"
     if value >= 1_000:
@@ -333,6 +411,10 @@ def _compact_number(value: float) -> str:
 
 
 def _format_cost(value: float | None) -> str:
+    """Format an optional USD cost for dashboard display.
+
+    格式化可选的美元成本以供仪表板显示。
+    """
     if value is None:
         return "$N/A"
     if 0 < value < 0.01:
@@ -349,7 +431,10 @@ def _line_chart(
     timestamps: Sequence[str] | None = None,
     events: Sequence[UsageEvent] = (),
 ) -> str:
-    """Render one interactive line chart as inline SVG."""
+    """Render one interactive line chart as inline SVG.
+
+    将一张交互式折线图渲染为内联 SVG。
+    """
     width, height = 900, 330
     left, right, top, bottom = 68, 20, 42, 52
     plot_width, plot_height = width - left - right, height - top - bottom
@@ -361,6 +446,10 @@ def _line_chart(
         maximum = ((maximum + magnitude - 1) // magnitude) * magnitude
 
     def point(index: int, value: float) -> tuple[float, float]:
+        """Map a series value to SVG plot coordinates.
+
+        将序列值映射为 SVG 绘图区坐标。
+        """
         x = left + (index / max(count - 1, 1)) * plot_width
         y = top + plot_height - (value / maximum) * plot_height
         return x, y
@@ -448,6 +537,10 @@ def _line_chart(
 
 
 def _figure(chart: str) -> str:
+    """Wrap chart markup with its PNG download control.
+
+    使用 PNG 下载控件包装图表标记。
+    """
     return (
         f'<figure class="usage-figure">{chart}'
         '<button type="button" class="png-button" '
@@ -456,7 +549,10 @@ def _figure(chart: str) -> str:
 
 
 def render_usage_dashboard(usage: SessionUsage) -> str:
-    """Render the usage dashboard markup for the export's Usage tab."""
+    """Render the usage dashboard markup for the export's Usage tab.
+
+    为导出页面的用量标签页渲染仪表板标记。
+    """
     requests = usage.requests
     if not requests:
         return (

@@ -1,4 +1,7 @@
-"""Append-only session tree primitives for Tau."""
+"""Append-only session tree primitives for Tau.
+
+Tau 的仅追加会话树基础组件。
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
-"""OpenAI Codex subscription Responses provider."""
+"""OpenAI Codex subscription Responses provider.
+
+OpenAI Codex 订阅版 Responses 提供商。
+"""
 
 from __future__ import annotations
 
@@ -58,7 +61,10 @@ DEFAULT_OPENAI_CODEX_CLIENT_VERSION = "0.153.4"
 
 @dataclass(frozen=True, slots=True)
 class OpenAICodexCredentials:
-    """Bearer token and account id required by ChatGPT Codex Responses."""
+    """Bearer token and account id required by ChatGPT Codex Responses.
+
+    ChatGPT Codex Responses 所需的 Bearer 令牌和账户 ID。
+    """
 
     access_token: str
     account_id: str
@@ -70,7 +76,10 @@ type OpenAICodexClientVersionResolver = Callable[[], Awaitable[str]]
 
 @dataclass(frozen=True, slots=True)
 class OpenAICodexConfig:
-    """Configuration for the OpenAI Codex subscription Responses endpoint."""
+    """Configuration for the OpenAI Codex subscription Responses endpoint.
+
+    OpenAI Codex 订阅版 Responses 端点的配置。
+    """
 
     credential_resolver: OpenAICodexCredentialResolver
     base_url: str = DEFAULT_OPENAI_CODEX_BASE_URL
@@ -86,13 +95,19 @@ class OpenAICodexConfig:
     # The endpoint requires an official Codex compatibility version and filters
     # newer models from older clients. Tau resolves the latest release at runtime;
     # this bundled value remains the offline/error fallback.
+    #
+    # 该端点要求使用官方 Codex 兼容版本，并会对旧版客户端过滤较新的模型。
+    # Tau 会在运行时解析最新版本；此内置值作为离线或出错时的回退值。
     client_version: str = DEFAULT_OPENAI_CODEX_CLIENT_VERSION
     client_version_resolver: OpenAICodexClientVersionResolver | None = None
     model_catalog_timeout_seconds: float = 5.0
 
 
 class OpenAICodexProvider:
-    """Provider adapter for ChatGPT subscription Codex Responses over SSE."""
+    """Provider adapter for ChatGPT subscription Codex Responses over SSE.
+
+    通过 SSE 接入 ChatGPT 订阅版 Codex Responses 的提供商适配器。
+    """
 
     def __init__(
         self,
@@ -100,6 +115,10 @@ class OpenAICodexProvider:
         *,
         client: httpx.AsyncClient | None = None,
     ) -> None:
+        """Initialize provider configuration, client ownership, and catalog caches.
+
+        初始化提供商配置、客户端所有权和模型目录缓存。
+        """
         self._config = config
         self._client = client
         self._owns_client = client is None
@@ -109,28 +128,44 @@ class OpenAICodexProvider:
 
     @property
     def account_id(self) -> str | None:
-        """Return the account associated with the latest catalog request."""
+        """Return the account associated with the latest catalog request.
+
+        返回与最近一次模型目录请求关联的账户。
+        """
         return self._account_id
 
     async def aclose(self) -> None:
-        """Close the underlying HTTP client if this provider created it."""
+        """Close the underlying HTTP client if this provider created it.
+
+        如果底层 HTTP 客户端由此提供商创建，则将其关闭。
+        """
         if self._client is not None and self._owns_client:
             await self._client.aclose()
             self._client = None
 
     async def discover_models(self) -> RuntimeModelCatalog:
-        """Discover the authenticated account's selectable Codex models."""
+        """Discover the authenticated account's selectable Codex models.
+
+        发现已认证账户可选择的 Codex 模型。
+        """
         await self._ensure_model_catalog()
         assert self._discovered_model_catalog is not None
         return self._discovered_model_catalog
 
     async def discover_model_limits(self, model: str) -> RuntimeModelLimits | None:
-        """Discover model limits from the authenticated Codex model catalog."""
+        """Discover model limits from the authenticated Codex model catalog.
+
+        从已认证的 Codex 模型目录中发现模型限制。
+        """
         await self._ensure_model_catalog()
         assert self._discovered_model_limits is not None
         return self._discovered_model_limits.get(model)
 
     async def _ensure_model_catalog(self) -> None:
+        """Fetch and parse the model catalog once, then reuse the cached results.
+
+        获取并解析一次模型目录，随后复用缓存结果。
+        """
         if self._discovered_model_catalog is not None:
             return
         payload = await self._fetch_model_catalog()
@@ -138,6 +173,10 @@ class OpenAICodexProvider:
         self._discovered_model_limits = _parse_codex_model_limits(payload)
 
     async def _fetch_model_catalog(self) -> object:
+        """Request the authenticated model catalog with the resolved client version.
+
+        使用解析出的客户端版本请求已认证的模型目录。
+        """
         client = self._get_client()
         credentials = await self._config.credential_resolver()
         self._account_id = credentials.account_id
@@ -173,7 +212,10 @@ class OpenAICodexProvider:
         signal: CancellationToken | None = None,
         session_id: str | None = None,
     ) -> AsyncIterator[AssistantMessageEvent]:
-        """Stream one response as Pi-compatible assistant message events."""
+        """Stream one response as Pi-compatible assistant message events.
+
+        将单次响应以兼容 Pi 的助手消息事件流形式返回。
+        """
         raw = self._stream_provider_events(
             model=model,
             system=system,
@@ -196,9 +238,19 @@ class OpenAICodexProvider:
         signal: CancellationToken | None = None,
         session_id: str | None = None,
     ) -> AsyncIterator[ProviderEvent]:
-        """Stream one Codex Responses request as provider-neutral events."""
+        """Stream one Codex Responses request as provider-neutral events.
+
+        将单次 Codex Responses 请求转换为提供商无关的事件流。
+        """
 
         async def iterator() -> AsyncIterator[ProviderEvent]:
+            """Build the request, retry transient failures, and yield provider events.
+
+            构建请求、重试暂时性故障，并逐个产出提供商事件。
+            """
+            # Prepare the reusable request payload and endpoint before retrying.
+            #
+            # 在进入重试循环前准备可复用的请求载荷和端点。
             client = self._get_client()
             cache_key = openai_prompt_cache_key(session_id)
             payload = _build_codex_payload(
@@ -215,6 +267,9 @@ class OpenAICodexProvider:
 
             attempt = 0
             while True:
+                # Authenticate each attempt, stream SSE events, and retry only before output.
+                #
+                # 每次尝试都重新认证并流式处理 SSE 事件，仅在尚未输出内容时重试。
                 emitted_content = False
                 emitted_thinking = False
                 try:
@@ -337,12 +392,18 @@ class OpenAICodexProvider:
                     )
                     return
                 except Exception as exc:  # noqa: BLE001 - provider errors are surfaced as events
+                    #
+                    # noqa: BLE001 - 提供商错误会以事件形式上报
                     yield ProviderErrorEvent(message=str(exc), data={"attempts": attempt + 1})
                     return
 
         return iterator()
 
     def _get_client(self) -> httpx.AsyncClient:
+        """Return the configured HTTP client, creating and owning one when needed.
+
+        返回已配置的 HTTP 客户端，并在需要时创建且持有一个客户端。
+        """
         if self._client is None:
             self._client = create_async_client(timeout=self._config.timeout_seconds)
         return self._client
@@ -354,6 +415,10 @@ class OpenAICodexProvider:
         status_code: int | None = None,
         body: str = "",
     ) -> bool:
+        """Decide whether another request attempt is allowed for the failure.
+
+        判断当前故障是否允许再次发起请求。
+        """
         if attempt >= self._config.max_retries:
             return False
         return status_code is None or _is_retryable_status(status_code, body)
@@ -361,21 +426,34 @@ class OpenAICodexProvider:
 
 class _ToolCallBuilder:
     def __init__(self, *, call_id: str, item_id: str | None, name: str) -> None:
+        """Initialize identifiers and storage for streamed tool arguments.
+
+        初始化标识符以及流式工具参数的存储空间。
+        """
         self.call_id = call_id
         self.item_id = item_id
         self.name = name
         self.arguments_parts: list[str] = []
 
     def add_delta(self, delta: str) -> None:
-        """Append a streamed tool-argument fragment."""
+        """Append a streamed tool-argument fragment.
+
+        追加一个流式工具参数片段。
+        """
         self.arguments_parts.append(delta)
 
     def set_arguments(self, arguments: str) -> None:
-        """Replace streamed tool arguments with final provider arguments."""
+        """Replace streamed tool arguments with final provider arguments.
+
+        使用提供商返回的最终参数替换流式工具参数。
+        """
         self.arguments_parts = [arguments]
 
     def update_from_item(self, item: Mapping[str, Any]) -> None:
-        """Fill in metadata from a completed function-call item."""
+        """Fill in metadata from a completed function-call item.
+
+        从已完成的函数调用项中补全元数据。
+        """
         call_id = item.get("call_id")
         if isinstance(call_id, str) and call_id:
             self.call_id = call_id
@@ -387,7 +465,10 @@ class _ToolCallBuilder:
             self.name = name
 
     def build(self) -> ToolCall:
-        """Build a complete Tau tool call."""
+        """Build a complete Tau tool call.
+
+        构建完整的 Tau 工具调用。
+        """
         arguments_text = "".join(self.arguments_parts)
         arguments = _loads_object(arguments_text) if arguments_text else {}
         if arguments is None:
@@ -411,6 +492,10 @@ def _build_codex_payload(
     supports_images: bool = False,
     prompt_cache_key: str | None = None,
 ) -> dict[str, JSONValue]:
+    """Build the Codex Responses request payload from Tau messages and tools.
+
+    根据 Tau 消息和工具构建 Codex Responses 请求载荷。
+    """
     payload: dict[str, JSONValue] = {
         "model": model,
         "store": False,
@@ -437,6 +522,13 @@ def _build_codex_payload(
 def _messages_to_responses_input(
     messages: list[AgentMessage], *, supports_images: bool = False
 ) -> list[JSONValue]:
+    """Convert Tau conversation messages into Codex Responses input items.
+
+    将 Tau 对话消息转换为 Codex Responses 输入项。
+    """
+    # Preserve user content, assistant reasoning, tool calls, and tool results in order.
+    #
+    # 按顺序保留用户内容、助手推理、工具调用和工具结果。
     items: list[JSONValue] = []
     assistant_index = 0
     for message in messages:
@@ -515,6 +607,10 @@ def _messages_to_responses_input(
 
 
 def _codex_input_image(image: ImageContent) -> dict[str, JSONValue]:
+    """Encode an image block as a Codex inline input image.
+
+    将图像块编码为 Codex 内联输入图像。
+    """
     return {
         "type": "input_image",
         "detail": "auto",
@@ -523,6 +619,10 @@ def _codex_input_image(image: ImageContent) -> dict[str, JSONValue]:
 
 
 def _tool_to_codex(tool: AgentTool) -> dict[str, JSONValue]:
+    """Convert a Tau tool definition into the Codex function-tool schema.
+
+    将 Tau 工具定义转换为 Codex 函数工具模式。
+    """
     return {
         "type": "function",
         "name": tool.name,
@@ -537,6 +637,13 @@ async def _codex_provider_events(
     *,
     signal: CancellationToken | None,
 ) -> AsyncIterator[ProviderEvent]:
+    """Translate Codex SSE objects into provider events and a final message.
+
+    将 Codex SSE 对象转换为提供商事件和最终消息。
+    """
+    # Accumulate text, reasoning, usage, and tool-call state while events arrive.
+    #
+    # 在事件到达时累积文本、推理、用量和工具调用状态。
     content_parts: list[str] = []
     thinking_parts: list[str] = []
     reasoning_items: dict[str, dict[str, JSONValue]] = {}
@@ -549,6 +656,9 @@ async def _codex_provider_events(
     usage: Usage | None = None
 
     async for event in _iter_sse_objects(response):
+        # Route each SSE event by type and emit normalized incremental updates.
+        #
+        # 按类型分派每个 SSE 事件，并输出规范化的增量更新。
         if signal is not None and signal.is_cancelled():
             return
         event_type = event.get("type")
@@ -688,6 +798,9 @@ async def _codex_provider_events(
             usage = _usage_from_response(event) or usage
             break
 
+    # Assemble accumulated state into the single terminal assistant response.
+    #
+    # 将累积状态组装为单个终止助手响应。
     content = assistant_content("".join(content_parts), tool_calls)
     if thinking_parts:
         content.insert(
@@ -709,6 +822,10 @@ async def _codex_provider_events(
 
 
 async def _iter_sse_objects(response: httpx.Response) -> AsyncIterator[dict[str, JSONValue]]:
+    """Parse data fields from an HTTP SSE response into JSON objects.
+
+    将 HTTP SSE 响应中的 data 字段解析为 JSON 对象。
+    """
     data_lines: list[str] = []
     async for line in response.aiter_lines():
         stripped = line.strip()
@@ -734,6 +851,10 @@ async def _iter_sse_objects(response: httpx.Response) -> AsyncIterator[dict[str,
 
 
 def _tool_builder_from_item(item: Mapping[str, Any]) -> _ToolCallBuilder:
+    """Create a tool-call builder from provider item metadata.
+
+    根据提供商项目元数据创建工具调用构建器。
+    """
     call_id = item.get("call_id")
     name = item.get("name")
     item_id = item.get("id")
@@ -753,6 +874,10 @@ def _track_tool_builder(
     by_call_id: dict[str, _ToolCallBuilder],
     by_output_index: dict[int, _ToolCallBuilder],
 ) -> None:
+    """Index an active tool builder by every identifier present in an event.
+
+    使用事件中存在的每个标识符索引活动工具构建器。
+    """
     if builder not in active_tools:
         active_tools.append(builder)
     if builder.item_id:
@@ -772,6 +897,10 @@ def _untrack_tool_builder(
     by_call_id: dict[str, _ToolCallBuilder],
     by_output_index: dict[int, _ToolCallBuilder],
 ) -> None:
+    """Remove a completed tool builder from all active indexes.
+
+    从所有活动索引中移除已完成的工具构建器。
+    """
     if builder in active_tools:
         active_tools.remove(builder)
     if builder.item_id and by_item_id.get(builder.item_id) is builder:
@@ -791,6 +920,10 @@ def _tool_builder_for_event(
     by_call_id: dict[str, _ToolCallBuilder],
     by_output_index: dict[int, _ToolCallBuilder],
 ) -> _ToolCallBuilder | None:
+    """Resolve the active tool builder associated with a stream event.
+
+    解析与流事件关联的活动工具构建器。
+    """
     item_id = _event_item_id(event)
     if item_id is not None and item_id in by_item_id:
         return by_item_id[item_id]
@@ -806,6 +939,10 @@ def _tool_builder_for_event(
 
 
 def _event_item_id(event: Mapping[str, Any]) -> str | None:
+    """Extract an item identifier from an event or its nested item.
+
+    从事件或其嵌套项目中提取项目标识符。
+    """
     item_id = event.get("item_id")
     if isinstance(item_id, str) and item_id:
         return item_id
@@ -818,6 +955,10 @@ def _event_item_id(event: Mapping[str, Any]) -> str | None:
 
 
 def _event_call_id(event: Mapping[str, Any]) -> str | None:
+    """Extract a call identifier from an event or its nested item.
+
+    从事件或其嵌套项目中提取调用标识符。
+    """
     call_id = event.get("call_id")
     if isinstance(call_id, str) and call_id:
         return call_id
@@ -830,6 +971,10 @@ def _event_call_id(event: Mapping[str, Any]) -> str | None:
 
 
 def _event_output_index(event: Mapping[str, Any]) -> int | None:
+    """Extract a non-boolean output index from a stream event.
+
+    从流事件中提取非布尔值的输出索引。
+    """
     output_index = event.get("output_index")
     if isinstance(output_index, int) and not isinstance(output_index, bool):
         return output_index
@@ -837,6 +982,10 @@ def _event_output_index(event: Mapping[str, Any]) -> int | None:
 
 
 def _text_from_done_message(item: Mapping[str, Any]) -> str:
+    """Collect output text and refusal text from a completed message item.
+
+    从已完成的消息项中收集输出文本和拒绝文本。
+    """
     content = item.get("content")
     if not isinstance(content, list):
         return ""
@@ -856,6 +1005,10 @@ def _text_from_done_message(item: Mapping[str, Any]) -> str:
 
 
 def _finish_reason_from_response(event: Mapping[str, Any]) -> str | None:
+    """Read the response status used as the provider finish reason.
+
+    读取用作提供商结束原因的响应状态。
+    """
     response = event.get("response")
     if not isinstance(response, Mapping):
         return None
@@ -866,14 +1019,23 @@ def _finish_reason_from_response(event: Mapping[str, Any]) -> str | None:
 
 
 def _int_or_zero(value: object) -> int:
+    """Return an integer value while treating booleans and other values as zero.
+
+    返回整数值，并将布尔值及其他类型视为零。
+    """
     return value if isinstance(value, int) and not isinstance(value, bool) else 0
 
 
 def _usage_from_response(event: Mapping[str, Any]) -> Usage | None:
     """Parse billed usage from a Responses ``response.completed``-style event.
 
+    从 Responses 的 ``response.completed`` 风格事件中解析计费用量。
+
     Cache reads and writes are subtracted from ``input_tokens`` to leave fresh
     input. Cost is left unset (None) because Tau has no per-model pricing table.
+
+    从 ``input_tokens`` 中减去缓存读取和写入量，以得到新增输入量。由于 Tau
+    没有按模型划分的价格表，因此费用保持未设置状态（None）。
     """
     response = event.get("response")
     if not isinstance(response, Mapping):
@@ -895,6 +1057,9 @@ def _usage_from_response(event: Mapping[str, Any]) -> Usage | None:
     output_details = raw.get("output_tokens_details")
     # Leave reasoning None (not 0) when the provider reports no breakdown,
     # honoring the "None = not reported" contract on Usage.
+    #
+    # 当提供商未报告明细时，将 reasoning 保持为 None（而不是 0），
+    # 以遵守 Usage 中“None = 未报告”的约定。
     reasoning = (
         _int_or_zero(output_details.get("reasoning_tokens"))
         if isinstance(output_details, Mapping)
@@ -911,6 +1076,10 @@ def _usage_from_response(event: Mapping[str, Any]) -> Usage | None:
 
 
 def _response_error_message(event: Mapping[str, Any]) -> str:
+    """Choose the most specific message for a failed response event.
+
+    为响应失败事件选择最具体的错误消息。
+    """
     code, message = _stream_error_details(event)
     if message:
         return message
@@ -920,6 +1089,10 @@ def _response_error_message(event: Mapping[str, Any]) -> str:
 
 
 def _error_message(event: Mapping[str, Any], *, fallback: str) -> str:
+    """Choose a stream error message, code, or caller-provided fallback.
+
+    选择流错误消息、错误代码或调用方提供的回退文本。
+    """
     code, message = _stream_error_details(event)
     if message:
         return message
@@ -931,11 +1104,18 @@ def _error_message(event: Mapping[str, Any], *, fallback: str) -> str:
 def _stream_error_details(event: Mapping[str, Any]) -> tuple[str | None, str | None]:
     """Extract the machine code and human message from a Codex stream error.
 
+    从 Codex 流错误中提取机器可读代码和人类可读消息。
+
     Codex reports failures either as a top-level ``error`` SSE event with a
     nested ``error`` object (``{"type":"error","error":{"code":...}}``) or
     as ``response.failed`` with the failure under ``response.error``. Looking
     only at top-level fields hides details such as ``server_is_overloaded``
     behind a generic fallback message.
+
+    Codex 会通过两种形式报告故障：一种是顶层 ``error`` SSE 事件，其中包含
+    嵌套的 ``error`` 对象（``{"type":"error","error":{"code":...}}``）；
+    另一种是 ``response.failed``，其故障信息位于 ``response.error`` 下。
+    如果只查看顶层字段，``server_is_overloaded`` 等细节会被通用回退消息掩盖。
     """
     sources: list[Mapping[str, Any]] = [event]
     nested = event.get("error")
@@ -977,7 +1157,10 @@ _TRANSIENT_STREAM_ERROR_MARKERS = (
 
 
 def _stream_error_event_data(event: ProviderErrorEvent) -> dict[str, JSONValue] | None:
-    """Return the raw SSE event attached to a provider stream error."""
+    """Return the raw SSE event attached to a provider stream error.
+
+    返回附加在提供商流错误上的原始 SSE 事件。
+    """
     data = event.data
     if not isinstance(data, dict):
         return None
@@ -986,7 +1169,10 @@ def _stream_error_event_data(event: ProviderErrorEvent) -> dict[str, JSONValue] 
 
 
 def _retryable_stream_error_event(event: ProviderErrorEvent) -> bool:
-    """Return True when an in-stream Codex error looks transient and retryable."""
+    """Return True when an in-stream Codex error looks transient and retryable.
+
+    当 Codex 流内错误看起来是暂时性且可重试时返回 True。
+    """
     raw = _stream_error_event_data(event)
     if raw is None:
         return False
@@ -1005,6 +1191,10 @@ def _build_codex_headers(
     originator: str,
     session_id: str | None = None,
 ) -> dict[str, str]:
+    """Build authenticated Codex request headers with optional session identity.
+
+    构建经过认证的 Codex 请求头，并可选择包含会话标识。
+    """
     headers = {
         **dict(configured_headers or {}),
         "Authorization": f"Bearer {access_token}",
@@ -1021,6 +1211,10 @@ def _build_codex_headers(
 
 
 def _resolve_codex_url(base_url: str) -> str:
+    """Normalize a configured base URL to the Codex Responses endpoint.
+
+    将配置的基础 URL 规范化为 Codex Responses 端点。
+    """
     normalized = base_url.rstrip("/")
     if normalized.endswith("/codex/responses"):
         return normalized
@@ -1030,6 +1224,10 @@ def _resolve_codex_url(base_url: str) -> str:
 
 
 def _resolve_codex_models_url(base_url: str) -> str:
+    """Normalize a configured base URL to the Codex models endpoint.
+
+    将配置的基础 URL 规范化为 Codex 模型端点。
+    """
     normalized = base_url.rstrip("/")
     if normalized.endswith("/codex/responses"):
         return f"{normalized.removesuffix('/responses')}/models"
@@ -1039,7 +1237,13 @@ def _resolve_codex_models_url(base_url: str) -> str:
 
 
 def _parse_codex_model_catalog(payload: object) -> RuntimeModelCatalog:
-    """Parse models the Codex backend marks visible to ChatGPT accounts."""
+    """Parse models the Codex backend marks visible to ChatGPT accounts.
+
+    解析 Codex 后端标记为对 ChatGPT 账户可见的模型。
+    """
+    # Validate, deduplicate, and rank visible models while preserving source order.
+    #
+    # 校验、去重并排序可见模型，同时保留来源顺序。
     if not isinstance(payload, Mapping):
         return RuntimeModelCatalog(())
     items = payload.get("models")
@@ -1090,7 +1294,13 @@ def _parse_codex_model_catalog(payload: object) -> RuntimeModelCatalog:
 
 
 def _codex_input_modalities(value: object) -> tuple[Literal["text", "image"], ...]:
+    """Normalize provider input modalities to Tau's supported values.
+
+    将提供商输入模态规范化为 Tau 支持的值。
+    """
     # Official Codex clients treat an omitted field as legacy text+image support.
+    #
+    # 官方 Codex 客户端将缺失字段视为兼容旧版的文本和图像支持。
     if value is None:
         return ("text", "image")
     if not isinstance(value, list):
@@ -1101,6 +1311,10 @@ def _codex_input_modalities(value: object) -> tuple[Literal["text", "image"], ..
 
 
 def _codex_thinking_levels(value: object) -> tuple[RuntimeThinkingLevel, ...]:
+    """Parse unique supported reasoning effort levels in provider order.
+
+    按提供商顺序解析唯一的受支持推理强度级别。
+    """
     if not isinstance(value, list):
         return ()
     levels: list[RuntimeThinkingLevel] = []
@@ -1113,6 +1327,10 @@ def _codex_thinking_levels(value: object) -> tuple[RuntimeThinkingLevel, ...]:
 
 
 def _codex_thinking_level(value: object) -> RuntimeThinkingLevel | None:
+    """Normalize one Codex reasoning effort into a Tau thinking level.
+
+    将单个 Codex 推理强度规范化为 Tau 思考级别。
+    """
     if value == "none":
         return "off"
     if value in {"minimal", "low", "medium", "high", "xhigh", "max"}:
@@ -1121,6 +1339,10 @@ def _codex_thinking_level(value: object) -> RuntimeThinkingLevel | None:
 
 
 def _parse_codex_model_limits(payload: object) -> dict[str, RuntimeModelLimits]:
+    """Build a model-to-limits mapping from a Codex catalog payload.
+
+    从 Codex 目录载荷构建模型到限制信息的映射。
+    """
     if not isinstance(payload, Mapping):
         return {}
     models = payload.get("models")
@@ -1140,6 +1362,10 @@ def _parse_codex_model_limits(payload: object) -> dict[str, RuntimeModelLimits]:
 
 
 def _runtime_model_limits(item: Mapping[object, object]) -> RuntimeModelLimits | None:
+    """Parse valid runtime limits from one Codex model catalog item.
+
+    从单个 Codex 模型目录项中解析有效的运行时限制。
+    """
     context_window = _positive_int(item.get("context_window")) or _positive_int(
         item.get("max_context_window")
     )
@@ -1157,12 +1383,20 @@ def _runtime_model_limits(item: Mapping[object, object]) -> RuntimeModelLimits |
 
 
 def _positive_int(value: object) -> int | None:
+    """Return a positive non-boolean integer or None.
+
+    返回正的非布尔整数，否则返回 None。
+    """
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         return None
     return value
 
 
 def _split_tool_call_id(value: str) -> tuple[str, str | None]:
+    """Split Tau's combined call and item identifier representation.
+
+    拆分 Tau 合并后的调用标识符和项目标识符表示。
+    """
     if "|" not in value:
         return value, None
     call_id, item_id = value.split("|", 1)
@@ -1170,6 +1404,10 @@ def _split_tool_call_id(value: str) -> tuple[str, str | None]:
 
 
 def _loads_object(value: str) -> dict[str, JSONValue] | None:
+    """Decode a JSON object, returning None for invalid or non-object input.
+
+    解码 JSON 对象；输入无效或不是对象时返回 None。
+    """
     try:
         loaded = loads(value)
     except JSONDecodeError:
@@ -1180,12 +1418,20 @@ def _loads_object(value: str) -> dict[str, JSONValue] | None:
 
 
 def _is_retryable_status(status_code: int, body: str) -> bool:
+    """Classify an HTTP failure as transient unless it is a terminal quota error.
+
+    将 HTTP 故障分类为暂时性错误，但终止性的配额错误除外。
+    """
     if status_code == 429 and _is_terminal_rate_limit(body):
         return False
     return status_code in {408, 409, 425, 429} or status_code >= 500
 
 
 def _is_terminal_rate_limit(body: str) -> bool:
+    """Detect quota and billing messages that retries cannot resolve.
+
+    检测重试无法解决的配额和计费消息。
+    """
     normalized = body.lower()
     markers = (
         "gousagelimiterror",

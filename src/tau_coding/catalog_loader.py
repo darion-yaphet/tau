@@ -1,4 +1,7 @@
-"""Load Tau's provider catalog from packaged and user TOML files."""
+"""Load Tau's provider catalog from packaged and user TOML files.
+
+从内置和用户 TOML 文件加载 Tau 的提供商目录。
+"""
 
 from __future__ import annotations
 
@@ -40,6 +43,9 @@ USER_CATALOG_FILENAME = "catalog.toml"
 
 # Thinking fields are merged as a group: an overlay that sets thinking_levels
 # replaces all four, mirroring _merge_provider_config in provider_config.
+
+# 思考相关字段会作为一个整体合并：设置 thinking_levels 的覆盖层会替换全部四个
+# 字段，其行为与 provider_config 中的 _merge_provider_config 一致。
 _THINKING_FIELDS = ("thinking_levels", "thinking_models", "thinking_default", "thinking_parameter")
 
 _NonEmptyString = Annotated[
@@ -52,7 +58,10 @@ _NonNegativeFloat = Annotated[float, Field(ge=0)]
 
 
 class CatalogError(ValueError):
-    """Raised when a Tau catalog file is invalid."""
+    """Raised when a Tau catalog file is invalid.
+
+    当 Tau 目录文件无效时抛出。
+    """
 
 
 class _CatalogCostTier(BaseModel):
@@ -66,6 +75,9 @@ class _CatalogCostTier(BaseModel):
     # Optional 1-hour TTL cache-write rate (Anthropic bills those above the
     # 5-minute cacheWrite rate). Omitted from the cost dict when unset so
     # consumers can fall back to cacheWrite.
+
+    # 可选的 1 小时 TTL 缓存写入费率（Anthropic 的该费率高于 5 分钟
+    # cacheWrite 费率）。未设置时不写入费用字典，以便使用方回退到 cacheWrite。
     cacheWrite1h: _NonNegativeFloat | None = None
 
 
@@ -120,13 +132,19 @@ class _CatalogFile(BaseModel):
 
 
 def builtin_catalog_resource_text() -> str:
-    """Return the packaged builtin catalog TOML text."""
+    """Return the packaged builtin catalog TOML text.
+
+    返回随包分发的内置目录 TOML 文本。
+    """
     return files("tau_coding").joinpath("data/catalog.toml").read_text(encoding="utf-8")
 
 
 @cache
 def builtin_catalog() -> tuple[ProviderCatalogEntry, ...]:
-    """Return Tau's built-in catalog with generated models.dev model data."""
+    """Return Tau's built-in catalog with generated models.dev model data.
+
+    返回包含 models.dev 生成模型数据的 Tau 内置目录。
+    """
     raw = _builtin_raw_with_generated_models()
     filtered = _apply_model_tombstones(raw, base=_builtin_raw())
     return _entries_from_raw(filtered, source="built-in catalog.toml")
@@ -134,19 +152,33 @@ def builtin_catalog() -> tuple[ProviderCatalogEntry, ...]:
 
 @cache
 def builtin_source_catalog() -> tuple[ProviderCatalogEntry, ...]:
-    """Return the application-owned catalog used as generator input/fallback."""
+    """Return the application-owned catalog used as generator input/fallback.
+
+    返回由应用维护、供生成器输入或回退使用的目录。
+    """
     raw = _builtin_raw()
     filtered = _apply_model_tombstones(raw, base=raw)
     return _entries_from_raw(filtered, source="built-in catalog.toml")
 
 
 def user_catalog_path(paths: TauPaths | None = None) -> Path:
-    """Return the user-level catalog overlay path."""
+    """Return the user-level catalog overlay path.
+
+    返回用户级目录覆盖文件的路径。
+    """
     return (paths or TauPaths()).home / USER_CATALOG_FILENAME
 
 
 def effective_catalog(paths: TauPaths | None = None) -> tuple[ProviderCatalogEntry, ...]:
-    """Return bundled, refreshed, then user-overlaid provider model data."""
+    """Return bundled, refreshed, then user-overlaid provider model data.
+
+    按内置、刷新缓存、用户覆盖的顺序合并并返回提供商模型数据。
+    """
+    # Core flow: start from generated/cached data, apply a user overlay when present,
+    # remove tombstoned models, then validate and materialize public entries.
+
+    # 核心流程：先读取生成数据和缓存数据，再按需应用用户覆盖层，移除已撤回模型，
+    # 最后完成校验并生成公开条目。
     builtin_raw = _builtin_raw_with_cached_models(paths)
     path = user_catalog_path(paths)
     if not path.exists():
@@ -163,7 +195,15 @@ def save_user_catalog_entries(
     entries: Iterable[ProviderCatalogEntry],
     paths: TauPaths | None = None,
 ) -> Path:
-    """Upsert full provider definitions into the user-level catalog file."""
+    """Upsert full provider definitions into the user-level catalog file.
+
+    将完整的提供商定义插入或更新到用户级目录文件中。
+    """
+    # Core flow: preserve unrelated raw providers, replace matching definitions,
+    # serialize the resulting catalog, and atomically replace the user file.
+
+    # 核心流程：保留无关的原始提供商，替换同名定义，序列化结果目录，
+    # 再以原子方式替换用户文件。
     path = user_catalog_path(paths)
     if path.exists():
         raw = _parse_catalog_text(path.read_text(encoding="utf-8"), source=str(path))
@@ -194,10 +234,18 @@ def save_user_catalog_entries(
 
 @cache
 def _builtin_raw() -> dict[str, Any]:
+    """Parse and cache the packaged catalog as a raw mapping.
+
+    将随包分发的目录解析为原始映射并缓存结果。
+    """
     return _parse_catalog_text(builtin_catalog_resource_text(), source="built-in catalog.toml")
 
 
 def _builtin_raw_with_cached_models(paths: TauPaths | None) -> dict[str, Any]:
+    """Merge a valid cached models.dev overlay into the generated built-in catalog.
+
+    将有效的 models.dev 缓存覆盖层合并到生成后的内置目录中。
+    """
     from tau_coding.models_dev_store import cached_models_dev_catalog_overlay
 
     raw = _builtin_raw_with_generated_models()
@@ -217,8 +265,15 @@ def _builtin_raw_with_cached_models(paths: TauPaths | None) -> dict[str, Any]:
 
 @cache
 def _builtin_raw_with_generated_models() -> dict[str, Any]:
+    """Merge valid bundled models.dev data into the application-owned catalog.
+
+    将有效的内置 models.dev 数据合并到由应用维护的目录中。
+    """
     # Imported lazily because models_dev uses the catalog dataclasses imported by
     # this module. Missing or invalid generated data is deliberately non-fatal.
+
+    # 这里采用延迟导入，因为 models_dev 会使用本模块导入的目录数据类。
+    # 生成数据缺失或无效时会被有意视为非致命情况。
     from tau_coding.models_dev import bundled_models_dev_catalog_overlay
 
     raw = _builtin_raw()
@@ -237,6 +292,10 @@ def _builtin_raw_with_generated_models() -> dict[str, Any]:
 
 
 def _parse_catalog_text(text: str, *, source: str) -> dict[str, Any]:
+    """Parse catalog TOML text and report decoding failures with source context.
+
+    解析目录 TOML 文本，并在解码失败时附带来源上下文。
+    """
     try:
         return tomllib.loads(text)
     except tomllib.TOMLDecodeError as error:
@@ -244,6 +303,10 @@ def _parse_catalog_text(text: str, *, source: str) -> dict[str, Any]:
 
 
 def _validate_catalog_root(raw: dict[str, Any], *, source: str) -> None:
+    """Validate top-level catalog keys, schema version, and provider table shape.
+
+    校验目录顶层键、模式版本以及提供商表的结构。
+    """
     allowed = {"schema_version", "providers"}
     unknown = sorted(set(raw) - allowed)
     if unknown:
@@ -256,7 +319,10 @@ def _validate_catalog_root(raw: dict[str, Any], *, source: str) -> None:
 
 
 def _merge_raw_catalogs(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
-    """Merge overlay provider tables over base ones; overlay values win."""
+    """Merge overlay provider tables over base ones; overlay values win.
+
+    将覆盖层提供商表合并到基础表之上，并以覆盖层的值为准。
+    """
     base_providers = _raw_providers(base)
     overlay_providers = _raw_providers(overlay)
     by_name: dict[str, dict[str, Any]] = {}
@@ -279,7 +345,10 @@ def _merge_raw_catalogs(base: dict[str, Any], overlay: dict[str, Any]) -> dict[s
 
 
 def _merge_generated_catalog(base: dict[str, Any], generated: dict[str, Any]) -> dict[str, Any]:
-    """Replace model inventories while retaining application-owned provider config."""
+    """Replace model inventories while retaining application-owned provider config.
+
+    替换模型清单，同时保留由应用维护的提供商配置。
+    """
     generated_by_name = {
         _raw_provider_name(provider): provider for provider in _raw_providers(generated)
     }
@@ -313,6 +382,10 @@ def _merge_generated_catalog(base: dict[str, Any], generated: dict[str, Any]) ->
 
 
 def _merge_raw_provider(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    """Merge one raw provider overlay while preserving grouped field semantics.
+
+    合并单个原始提供商覆盖层，同时保留成组字段的合并语义。
+    """
     merged = {**base, **overlay}
     base_models = base.get("models", [])
     overlay_models = overlay.get("models", [])
@@ -345,7 +418,10 @@ def _apply_model_tombstones(
     *,
     base: dict[str, Any],
 ) -> dict[str, Any]:
-    """Remove provider-scoped models withdrawn by bundled or user catalogs."""
+    """Remove provider-scoped models withdrawn by bundled or user catalogs.
+
+    移除内置目录或用户目录中标记为撤回的提供商级模型。
+    """
     base_by_name = {_raw_provider_name(provider): provider for provider in _raw_providers(base)}
     providers: list[dict[str, Any]] = []
     for provider in _raw_providers(raw):
@@ -380,6 +456,10 @@ def _apply_model_tombstones(
 
 
 def _merge_model_metadata(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    """Merge per-model metadata and its nested mapping fields.
+
+    合并逐模型元数据及其中的嵌套映射字段。
+    """
     merged: dict[str, Any] = {**base}
     for model, overlay_metadata in overlay.items():
         base_metadata = merged.get(model)
@@ -397,6 +477,10 @@ def _merge_model_metadata(base: dict[str, Any], overlay: dict[str, Any]) -> dict
 
 
 def _raw_providers(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return raw provider tables after validating their container shape.
+
+    校验提供商容器结构后返回原始提供商表。
+    """
     providers = raw.get("providers", [])
     if not isinstance(providers, list) or not all(isinstance(item, dict) for item in providers):
         raise CatalogError("catalog providers must be an array of tables ([[providers]])")
@@ -404,6 +488,10 @@ def _raw_providers(raw: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _raw_provider_name(provider: dict[str, Any]) -> str:
+    """Return a normalized non-empty name from a raw provider table.
+
+    从原始提供商表中返回规范化的非空名称。
+    """
     name = provider.get("name")
     if not isinstance(name, str) or not name.strip():
         raise CatalogError("catalog provider entries must have a non-empty string name")
@@ -411,6 +499,10 @@ def _raw_provider_name(provider: dict[str, Any]) -> str:
 
 
 def _entries_from_raw(raw: dict[str, Any], *, source: str) -> tuple[ProviderCatalogEntry, ...]:
+    """Validate raw catalog data and convert it into unique provider entries.
+
+    校验原始目录数据，并将其转换为名称唯一的提供商条目。
+    """
     try:
         catalog = _CatalogFile.model_validate(raw)
     except ValidationError as error:
@@ -424,6 +516,10 @@ def _entries_from_raw(raw: dict[str, Any], *, source: str) -> tuple[ProviderCata
 
 
 def _entry_from_provider(provider: _CatalogProvider, *, source: str) -> ProviderCatalogEntry:
+    """Validate cross-field provider rules and build a catalog entry.
+
+    校验提供商各字段之间的约束，并构建目录条目。
+    """
     prefix = f"{source}: providers.{provider.name}"
     if provider.default_model not in provider.models:
         raise CatalogError(f"{prefix}.default_model: {provider.default_model!r} is not in models")
@@ -488,6 +584,10 @@ def _validate_cost_tiers(
     *,
     field_name: str,
 ) -> None:
+    """Ensure cost tier limits increase strictly and the final tier is unbounded.
+
+    确保费用分层上限严格递增，且最后一层不设置上限。
+    """
     if not tiers:
         return
     if tiers[-1].max_input_tokens is not None:
@@ -504,6 +604,10 @@ def _validate_cost_tiers(
 
 
 def _model_metadata_from_provider(metadata: _CatalogModelMetadata) -> ModelCatalogMetadata:
+    """Convert validated model metadata into the public catalog representation.
+
+    将校验后的模型元数据转换为公开的目录表示。
+    """
     thinking_level_map: dict[ThinkingLevel, str | None] = dict(metadata.thinking_level_map)
     for level in metadata.unsupported_thinking_levels:
         thinking_level_map[level] = None
@@ -530,6 +634,10 @@ def _model_metadata_from_provider(metadata: _CatalogModelMetadata) -> ModelCatal
 
 
 def _cost_tier_rates(tier: _CatalogCostTier) -> dict[str, float]:
+    """Build the cost-rate mapping for one validated pricing tier.
+
+    为一个已校验的计费层级构建费率映射。
+    """
     rates = {
         "input": tier.input,
         "output": tier.output,
@@ -542,10 +650,18 @@ def _cost_tier_rates(tier: _CatalogCostTier) -> dict[str, float]:
 
 
 def _json_object(value: Mapping[str, Any], field_name: str) -> dict[str, JSONValue]:
+    """Convert a mapping into a JSON-compatible object with field-aware errors.
+
+    将映射转换为 JSON 兼容对象，并在报错时标明字段位置。
+    """
     return {key: _json_value(item, f"{field_name}.{key}") for key, item in value.items()}
 
 
 def _json_value(value: Any, field_name: str) -> JSONValue:
+    """Recursively validate and convert a catalog value to a JSON value.
+
+    递归校验目录值并将其转换为 JSON 值。
+    """
     if value is None or isinstance(value, str | int | float | bool):
         return value
     if isinstance(value, list):
@@ -561,6 +677,10 @@ def _json_value(value: Any, field_name: str) -> JSONValue:
 
 
 def _format_validation_error(raw: dict[str, Any], error: ValidationError) -> str:
+    """Format schema validation issues with readable dotted catalog locations.
+
+    使用易读的目录点路径格式化模式校验问题。
+    """
     messages = []
     for issue in error.errors():
         location = ".".join(_dotted_location(raw, issue["loc"]))
@@ -569,6 +689,10 @@ def _format_validation_error(raw: dict[str, Any], error: ValidationError) -> str
 
 
 def _dotted_location(raw: dict[str, Any], location: tuple[int | str, ...]) -> list[str]:
+    """Translate a validation location into dotted parts using provider names.
+
+    使用提供商名称将校验位置转换为点路径片段。
+    """
     parts: list[str] = []
     for part in location:
         if parts and parts[-1] == "providers" and isinstance(part, int):
@@ -585,6 +709,10 @@ def _dotted_location(raw: dict[str, Any], location: tuple[int | str, ...]) -> li
 
 
 def _raw_provider_from_entry(entry: ProviderCatalogEntry) -> dict[str, Any]:
+    """Serialize a provider catalog entry into its raw TOML-ready mapping.
+
+    将提供商目录条目序列化为可写入 TOML 的原始映射。
+    """
     raw: dict[str, Any] = {
         "name": entry.name,
         "display_name": entry.display_name,
@@ -626,6 +754,10 @@ def _raw_provider_from_entry(entry: ProviderCatalogEntry) -> dict[str, Any]:
 
 
 def _raw_model_metadata_from_entry(metadata: ModelCatalogMetadata) -> dict[str, Any]:
+    """Serialize model metadata while omitting unset optional fields.
+
+    序列化模型元数据，并省略未设置的可选字段。
+    """
     raw: dict[str, Any] = {}
     if metadata.name is not None:
         raw["name"] = metadata.name
@@ -671,6 +803,10 @@ def _raw_model_metadata_from_entry(metadata: ModelCatalogMetadata) -> dict[str, 
 
 
 def _catalog_to_toml(raw: dict[str, Any]) -> str:
+    """Render a raw catalog mapping as deterministic TOML text.
+
+    将原始目录映射渲染为确定性的 TOML 文本。
+    """
     lines = [f"schema_version = {raw.get('schema_version', CATALOG_SCHEMA_VERSION)}", ""]
     for provider in _raw_providers(raw):
         lines.append("[[providers]]")
@@ -716,12 +852,20 @@ def _catalog_to_toml(raw: dict[str, Any]) -> str:
 
 
 def _toml_key(value: str) -> str:
+    """Render a TOML key plainly when safe, otherwise as a quoted string.
+
+    在安全时直接渲染 TOML 键，否则将其渲染为带引号的字符串。
+    """
     if value.replace("_", "").replace("-", "").isalnum() and not value[0].isdigit():
         return value
     return json.dumps(value)
 
 
 def _toml_value(value: object) -> str:
+    """Render supported Python scalar and container values as TOML literals.
+
+    将支持的 Python 标量和容器值渲染为 TOML 字面量。
+    """
     if isinstance(value, str):
         return json.dumps(value)
     if isinstance(value, bool):
@@ -742,6 +886,10 @@ def _toml_value(value: object) -> str:
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
+    """Write text through a temporary sibling file and atomically replace the target.
+
+    先将文本写入同目录临时文件，再以原子方式替换目标文件。
+    """
     temp_path: Path | None = None
     try:
         with NamedTemporaryFile(

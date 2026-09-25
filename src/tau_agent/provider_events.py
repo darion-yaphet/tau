@@ -1,4 +1,7 @@
-"""Pi-compatible assistant stream events owned by the portable agent layer."""
+"""Pi-compatible assistant stream events owned by the portable agent layer.
+
+由可移植代理层拥有的 Pi 兼容助手流式事件。
+"""
 
 from __future__ import annotations
 

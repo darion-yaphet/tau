@@ -1,4 +1,7 @@
-"""Lifetime activity and usage totals for an active session branch."""
+"""Lifetime activity and usage totals for an active session branch.
+
+活动会话分支在整个生命周期内的活动和用量总计。
+"""
 
 from __future__ import annotations
 
@@ -15,7 +18,10 @@ _TOKENS_PER_MILLION = 1_000_000
 
 @dataclass(frozen=True, slots=True)
 class SessionStats:
-    """Cumulative activity and billed usage for one active branch."""
+    """Cumulative activity and billed usage for one active branch.
+
+    一个活动分支的累计活动和计费用量。
+    """
 
     turn_count: int = 0
     tool_call_count: int = 0
@@ -35,8 +41,13 @@ class SessionStats:
     def cache_hit_rate(self) -> float | None:
         """Share of prompt tokens served from the provider's cache.
 
+        由提供者缓存供应的提示词令牌占比。
+
         None when no provider in the branch reported any cache activity, so that
         backends without prompt caching are not shown a permanent 0%.
+
+        当分支中没有提供者报告缓存活动时返回 None，以免不支持提示词缓存的
+        后端始终显示 0%。
         """
         if self.input_tokens <= 0:
             return None
@@ -46,7 +57,10 @@ class SessionStats:
 
     @property
     def latest_cache_hit_rate(self) -> float | None:
-        """Share of the latest request's prompt served from cache."""
+        """Share of the latest request's prompt served from cache.
+
+        最新请求中由缓存供应的提示词占比。
+        """
         if self.latest_prompt_tokens <= 0:
             return None
         if self.cached_input_tokens == 0 and self.cache_write_tokens == 0:
@@ -55,14 +69,20 @@ class SessionStats:
 
     @property
     def output_tokens_per_second(self) -> float | None:
-        """Token-weighted effective output speed across timed responses."""
+        """Token-weighted effective output speed across timed responses.
+
+        对计时响应按令牌加权计算的有效输出速度。
+        """
         if self.timed_output_tokens <= 0 or self.response_duration_ms <= 0:
             return None
         return self.timed_output_tokens * 1000 / self.response_duration_ms
 
     @property
     def average_time_to_first_output_ms(self) -> float | None:
-        """Mean time from request start to the first output event."""
+        """Mean time from request start to the first output event.
+
+        从请求开始到首个输出事件的平均耗时。
+        """
         if self.timed_first_output_count <= 0:
             return None
         return self.time_to_first_output_ms / self.timed_first_output_count
@@ -73,7 +93,10 @@ def calculate_session_stats(
     *,
     pricing: PricingResolver,
 ) -> SessionStats:
-    """Aggregate original branch messages, including messages replaced by compaction."""
+    """Aggregate original branch messages, including messages replaced by compaction.
+
+    汇总分支中的原始消息，包括被压缩替换的消息。
+    """
     turn_count = 0
     tool_call_count = 0
     input_tokens = 0
@@ -137,6 +160,9 @@ def calculate_session_stats(
             # TPS is token-weighted and requires usable output usage. TTFT is a
             # per-call arithmetic mean whenever output was observed, even if a
             # later error left that response without billed output tokens.
+            #
+            # TPS 按令牌加权，并要求输出用量有效。只要观察到输出，TTFT 就按
+            # 每次调用计算算术平均值，即使后续错误导致该响应没有计费输出令牌。
             if usage.output > 0 and timing.total_duration_ms > 0:
                 timed_output_tokens += usage.output
                 response_duration_ms += timing.total_duration_ms
@@ -191,10 +217,16 @@ def _response_cost(
 ) -> float:
     """Calculate one response's estimated USD cost from per-million-token rates.
 
+    根据每百万令牌费率计算一次响应的预估美元成本。
+
     ``cache_write_tokens`` is the provider-reported total, which already
     includes any 1-hour TTL writes. Anthropic bills those at a higher rate, so
     they are priced at ``cacheWrite1h`` when the catalog provides it, falling
     back to the 5-minute ``cacheWrite`` rate otherwise.
+
+    ``cache_write_tokens`` 是提供者报告的总量，其中已包含一小时 TTL 写入。
+    Anthropic 对此采用更高费率，因此当目录提供 ``cacheWrite1h`` 时按该费率
+    计价，否则回退到五分钟的 ``cacheWrite`` 费率。
     """
     write_1h = min(cache_write_1h_tokens, cache_write_tokens)
     return (

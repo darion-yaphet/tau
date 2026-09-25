@@ -1,4 +1,7 @@
-"""Session export helpers for human-readable transcript views."""
+"""Session export helpers for human-readable transcript views.
+
+用于生成易读会话记录视图的会话导出辅助工具。
+"""
 
 from __future__ import annotations
 
@@ -52,11 +55,17 @@ from tau_coding.tui.themes import TAU_DARK_THEME, TAU_LIGHT_THEME, TuiTheme
 
 
 class SessionExportError(ValueError):
-    """Raised when a session cannot be exported."""
+    """Raised when a session cannot be exported.
+
+    无法导出会话时抛出的异常。
+    """
 
 
 def default_session_export_path(session_path: Path) -> Path:
-    """Return the default HTML export path for a JSONL session file."""
+    """Return the default HTML export path for a JSONL session file.
+
+    返回 JSONL 会话文件的默认 HTML 导出路径。
+    """
     return session_path.with_suffix(".html")
 
 
@@ -66,20 +75,29 @@ def default_session_export_artifact_path(
     destination_dir: Path,
     format: str = "html",
 ) -> Path:
-    """Return the default user-facing export artifact path."""
+    """Return the default user-facing export artifact path.
+
+    返回默认的面向用户导出产物路径。
+    """
     suffix = _export_suffix(format)
     return destination_dir / f"{session_path.stem}{suffix}"
 
 
 def export_session_jsonl(entries: Sequence[SessionEntry], output_path: Path) -> Path:
-    """Write session entries to a JSONL export and return its path."""
+    """Write session entries to a JSONL export and return its path.
+
+    将会话条目写入 JSONL 导出文件并返回其路径。
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(_session_jsonl_text(entries), encoding="utf-8")
     return output_path
 
 
 def _session_jsonl_text(entries: Sequence[SessionEntry]) -> str:
-    """Serialize session entries to JSONL text (one JSON object per line)."""
+    """Serialize session entries to JSONL text (one JSON object per line).
+
+    将会话条目序列化为 JSONL 文本，每行一个 JSON 对象。
+    """
     lines = [entry.model_dump_json() for entry in entries]
     return "\n".join(lines) + ("\n" if lines else "")
 
@@ -92,7 +110,10 @@ def export_session_html(
     source: str | None = None,
     system_prompt: str | None = None,
 ) -> Path:
-    """Write a self-contained HTML session export and return its path."""
+    """Write a self-contained HTML session export and return its path.
+
+    写入独立完整的 HTML 会话导出文件并返回其路径。
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         render_session_html(
@@ -115,7 +136,10 @@ def export_session_artifact(
     format: str | None = None,
     system_prompt: str | None = None,
 ) -> Path:
-    """Write a session export in the requested or inferred format."""
+    """Write a session export in the requested or inferred format.
+
+    按请求或推断出的格式写入会话导出文件。
+    """
     export_format = normalize_export_format(format or output_path.suffix.removeprefix("."))
     if export_format == "jsonl":
         return export_session_jsonl(entries, output_path)
@@ -129,7 +153,10 @@ def export_session_artifact(
 
 
 def normalize_export_format(value: str | None) -> str:
-    """Normalize a session export format name."""
+    """Normalize a session export format name.
+
+    规范化会话导出格式名称。
+    """
     normalized = (value or "html").strip().lower().removeprefix(".")
     if normalized in {"htm", "html"}:
         return "html"
@@ -139,11 +166,18 @@ def normalize_export_format(value: str | None) -> str:
 
 
 def _export_suffix(format: str) -> str:
+    """Return the filename suffix for an export format.
+
+    返回导出格式对应的文件名后缀。
+    """
     return ".jsonl" if normalize_export_format(format) == "jsonl" else ".html"
 
 
 def _jsonl_filename(title: str, source: str | None) -> str:
-    """Return the filename used by the in-page JSONL download button."""
+    """Return the filename used by the in-page JSONL download button.
+
+    返回页面内 JSONL 下载按钮使用的文件名。
+    """
     if source:
         stem = Path(source).stem
         if stem:
@@ -153,7 +187,10 @@ def _jsonl_filename(title: str, source: str | None) -> str:
 
 
 def _export_theme_css(theme: TuiTheme) -> str:
-    """Map a built-in TUI theme to the export's semantic CSS variables."""
+    """Map a built-in TUI theme to the export's semantic CSS variables.
+
+    将内置 TUI 主题映射为导出页面的语义 CSS 变量。
+    """
     return "\n".join(
         (
             f"      --bg: {theme.screen_background};",
@@ -181,7 +218,10 @@ def render_session_html(
     source: str | None = None,
     system_prompt: str | None = None,
 ) -> str:
-    """Render a session transcript/tree as standalone HTML."""
+    """Render a session transcript/tree as standalone HTML.
+
+    将会话记录或会话树渲染为独立 HTML。
+    """
     entry_list = list(entries)
     active_leaf_id = _active_leaf_id(entry_list)
     active_path_ids = _active_path_ids(entry_list, active_leaf_id)
@@ -1072,7 +1112,10 @@ def render_session_html(
 
 
 def _render_system_prompt(system_prompt: str | None) -> str:
-    """Render live request configuration separately from transcript entries."""
+    """Render live request configuration separately from transcript entries.
+
+    将实时请求配置与会话记录条目分开渲染。
+    """
     if system_prompt is None:
         return ""
     return (
@@ -1086,7 +1129,10 @@ def _render_system_prompt(system_prompt: str | None) -> str:
 
 
 def _visible_export_entries(entries: list[SessionEntry]) -> list[SessionEntry]:
-    """Hide presentation-only entries while preserving visible tree ancestry."""
+    """Hide presentation-only entries while preserving visible tree ancestry.
+
+    隐藏仅用于展示的条目，同时保留可见树的祖先关系。
+    """
     entries_by_id = {entry.id: entry for entry in entries}
     hidden_ids = {
         entry.id for entry in entries if isinstance(entry, CustomMessageEntry) and not entry.display
@@ -1110,6 +1156,10 @@ def _visible_export_entries(entries: list[SessionEntry]) -> list[SessionEntry]:
 
 
 def _active_leaf_id(entries: Sequence[SessionEntry]) -> str | None:
+    """Return the final entry id used as the active export leaf.
+
+    返回作为导出活动叶节点的最后条目标识符。
+    """
     for entry in reversed(entries):
         if not isinstance(entry, LeafEntry):
             return entry.id
@@ -1117,6 +1167,10 @@ def _active_leaf_id(entries: Sequence[SessionEntry]) -> str | None:
 
 
 def _active_path_ids(entries: list[SessionEntry], active_leaf_id: str | None) -> set[str]:
+    """Collect entry ids on the path from the active leaf to the root.
+
+    收集从活动叶节点到根节点路径上的条目标识符。
+    """
     if active_leaf_id is None:
         return set()
     try:
@@ -1131,6 +1185,10 @@ def _render_tree(
     active_leaf_id: str | None,
     labels_by_id: dict[str, str],
 ) -> str:
+    """Render the visible session entry hierarchy.
+
+    渲染可见的会话条目层级结构。
+    """
     if not entries:
         return '<p class="empty">No entries.</p>'
 
@@ -1196,10 +1254,16 @@ def _render_tree_chain(
 ) -> str:
     """Render `start` and its unbranched descendants as flat sibling `<li>`s.
 
+    将 `start` 及其无分支后代渲染为扁平的同级列表项。
+
     Session history is usually a straight line, so a naive tree renders one
     nested level per entry. Instead, follow single-child chains at the same
     list level and only introduce a nested `<ol>` where the history actually
     forks (a node with more than one child).
+
+    会话历史通常是一条直线，因此朴素树结构会为每个条目渲染一层嵌套。这里让
+    单子节点链保持在同一列表层级，仅在历史真正分叉（节点拥有多个子节点）时
+    引入嵌套的有序列表。
     """
     chain: list[SessionEntry] = []
     fork_children: list[SessionEntry] = []
@@ -1251,6 +1315,10 @@ def _render_tree_node(
     active_leaf_id: str | None,
     labels_by_id: dict[str, str],
 ) -> str:
+    """Render one session-tree node and its child branches.
+
+    渲染一个会话树节点及其子分支。
+    """
     classes = ["tree-node"]
     if entry.id in active_path_ids:
         classes.append("active-path")
@@ -1278,6 +1346,10 @@ def _render_entry_details(
     active_path_ids: set[str],
     active_leaf_id: str | None,
 ) -> str:
+    """Render detailed transcript sections for visible entries.
+
+    为可见条目渲染详细的会话记录区段。
+    """
     if not entries:
         return '<p class="empty">No session entries were found.</p>'
 
@@ -1298,6 +1370,10 @@ def _render_entry_detail(
     active_path_ids: set[str],
     active_leaf_id: str | None,
 ) -> str:
+    """Render one entry's detailed article markup.
+
+    渲染一个条目的详细文章标记。
+    """
     classes = ["entry"]
     status_bits = []
     if entry.id in active_path_ids:
@@ -1343,6 +1419,10 @@ def _render_entry_detail(
 
 
 def _render_entry_body(entry: SessionEntry) -> str:
+    """Render the type-specific body for one session entry.
+
+    为一个会话条目渲染特定类型的正文。
+    """
     if isinstance(entry, MessageEntry):
         return _render_message_entry(entry)
     if isinstance(entry, CustomMessageEntry):
@@ -1416,6 +1496,10 @@ def _render_entry_body(entry: SessionEntry) -> str:
 
 
 def _render_message_entry(entry: MessageEntry) -> str:
+    """Render a message entry and its structured content blocks.
+
+    渲染消息条目及其结构化内容块。
+    """
     message = entry.message
     if isinstance(message, UserMessage):
         return f"<pre>{_escape(message.text)}</pre>"
@@ -1473,7 +1557,10 @@ def _render_block(
     extra_classes: str = "",
     icon: str = "",
 ) -> str:
-    """Render a collapsible content block inside an entry body."""
+    """Render a collapsible content block inside an entry body.
+
+    在条目正文中渲染可折叠内容块。
+    """
     classes = f"block {extra_classes}".strip()
     hint_html = f'<span class="block-hint">{_escape(hint)}</span>' if hint else ""
     icon_html = f'<span class="icon">{icon}</span>' if icon else ""
@@ -1486,6 +1573,10 @@ def _render_block(
 
 
 def _render_list(title: str, values: Sequence[str]) -> str:
+    """Render a titled list when values are present.
+
+    当存在值时渲染带标题的列表。
+    """
     if not values:
         return ""
     return (
@@ -1512,6 +1603,8 @@ _ICON_ASSISTANT = (
     "</svg>"
 )
 # Claw-hammer icon adapted from Lucide (https://lucide.dev, ISC license).
+#
+# 羊角锤图标改编自 Lucide（https://lucide.dev，ISC 许可证）。
 _ICON_TOOL = (
     '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"'
     ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
@@ -1586,6 +1679,10 @@ _ICON_DOWNLOAD = (
 
 
 def _entry_icon(entry: SessionEntry) -> str:
+    """Return the SVG icon associated with an entry type.
+
+    返回与条目类型关联的 SVG 图标。
+    """
     if isinstance(entry, CustomMessageEntry):
         return _ICON_USER
     if isinstance(entry, MessageEntry):
@@ -1609,12 +1706,20 @@ def _entry_icon(entry: SessionEntry) -> str:
 
 
 def _entry_parent_html(entry: SessionEntry) -> str:
+    """Render optional parent-entry metadata.
+
+    渲染可选的父条目元数据。
+    """
     if entry.parent_id is None:
         return '<span class="empty">root</span>'
     return f'<a href="#entry-{_attr(entry.parent_id)}"><code>{_escape(entry.parent_id)}</code></a>'
 
 
 def _entry_title(entry: SessionEntry) -> str:
+    """Return the human-readable title for an entry.
+
+    返回条目的人类可读标题。
+    """
     if isinstance(entry, CustomMessageEntry):
         return f"Custom message: {entry.custom_type}"
     if isinstance(entry, MessageEntry):
@@ -1646,7 +1751,10 @@ def _entry_title(entry: SessionEntry) -> str:
 
 
 def _entry_preview(entry: SessionEntry) -> str:
-    """Return a short one-line preview shown on the collapsed entry row."""
+    """Return a short one-line preview shown on the collapsed entry row.
+
+    返回折叠条目行中显示的简短单行预览。
+    """
     if isinstance(entry, CustomMessageEntry):
         return _summarize_text(content_text(entry.content))
     if isinstance(entry, MessageEntry):
@@ -1674,6 +1782,10 @@ def _entry_preview(entry: SessionEntry) -> str:
 
 
 def _resolved_labels(entries: Sequence[SessionEntry]) -> dict[str, str]:
+    """Resolve the latest label for each referenced entry.
+
+    解析每个被引用条目的最新标签。
+    """
     labels: dict[str, str] = {}
     for entry in entries:
         if not isinstance(entry, LabelEntry):
@@ -1687,7 +1799,10 @@ def _resolved_labels(entries: Sequence[SessionEntry]) -> dict[str, str]:
 
 
 def _entry_tree_label(entry: SessionEntry) -> str:
-    """Return the sidebar label: just the tool name for tool entries."""
+    """Return the sidebar label: just the tool name for tool entries.
+
+    返回侧边栏标签；工具条目仅显示工具名称。
+    """
     if isinstance(entry, CustomMessageEntry):
         summary = _entry_preview(entry)
         return f"custom message: {summary}" if summary else "custom message"
@@ -1706,7 +1821,10 @@ def _entry_tree_label(entry: SessionEntry) -> str:
 
 
 def _is_tool_only_assistant(message: object) -> TypeGuard[AssistantMessage]:
-    """Whether an assistant message carries only tool calls (no text/thinking)."""
+    """Whether an assistant message carries only tool calls (no text/thinking).
+
+    返回助手消息是否仅包含工具调用，不含文本或思考内容。
+    """
     return (
         isinstance(message, AssistantMessage)
         and bool(message.tool_calls)
@@ -1719,6 +1837,10 @@ def _is_tool_only_assistant(message: object) -> TypeGuard[AssistantMessage]:
 
 
 def _entry_is_error(entry: SessionEntry) -> bool:
+    """Return whether an entry represents an error state.
+
+    返回条目是否表示错误状态。
+    """
     return (
         isinstance(entry, MessageEntry)
         and isinstance(entry.message, ToolResultMessage)
@@ -1727,6 +1849,10 @@ def _entry_is_error(entry: SessionEntry) -> bool:
 
 
 def _entry_filter_kind(entry: SessionEntry) -> str:
+    """Return the UI filter category for an entry.
+
+    返回条目的界面筛选类别。
+    """
     if isinstance(entry, CustomMessageEntry):
         return "message"
     if isinstance(entry, MessageEntry):
@@ -1740,6 +1866,10 @@ def _entry_filter_kind(entry: SessionEntry) -> str:
 
 
 def _summarize_text(text: str, *, limit: int = 110) -> str:
+    """Collapse whitespace and truncate text for compact previews.
+
+    折叠空白并截断文本，以生成紧凑预览。
+    """
     summary = " ".join(text.split())
     if len(summary) <= limit:
         return summary
@@ -1747,6 +1877,10 @@ def _summarize_text(text: str, *, limit: int = 110) -> str:
 
 
 def _json_dump(value: JSONValue) -> str:
+    """Serialize a JSON value for readable export display.
+
+    序列化 JSON 值，以便在导出内容中清晰显示。
+    """
     return json.dumps(value, indent=2, sort_keys=True)
 
 
@@ -1755,26 +1889,46 @@ _HIGHLIGHT_FORMATTER = HtmlFormatter(nowrap=True)
 
 
 def _render_json_block(value: JSONValue) -> str:
-    """Render a JSON payload as a syntax-highlighted, self-contained <pre> block."""
+    """Render a JSON payload as a syntax-highlighted, self-contained <pre> block.
+
+    将 JSON 载荷渲染为带语法高亮且独立完整的预格式化块。
+    """
     source = _json_dump(value)
     try:
         highlighted = highlight(source, _JSON_LEXER, _HIGHLIGHT_FORMATTER)
     except Exception:  # noqa: BLE001 - fall back to plain escaped text
+        # 出现任何高亮错误时回退到普通转义文本。
         return f"<pre>{_escape(source)}</pre>"
     return f'<pre class="highlight">{highlighted}</pre>'
 
 
 def _format_timestamp(timestamp: float) -> str:
+    """Format a timestamp as a full local date and time.
+
+    将时间戳格式化为完整的本地日期和时间。
+    """
     return datetime.fromtimestamp(timestamp, tz=UTC).replace(microsecond=0).isoformat()
 
 
 def _format_time_short(timestamp: float) -> str:
+    """Format a timestamp as a short local clock time.
+
+    将时间戳格式化为简短的本地时钟时间。
+    """
     return datetime.fromtimestamp(timestamp, tz=UTC).strftime("%H:%M:%S")
 
 
 def _escape(value: object) -> str:
+    """Escape a value for safe HTML text content.
+
+    转义值以安全用作 HTML 文本内容。
+    """
     return html.escape(str(value), quote=False)
 
 
 def _attr(value: object) -> str:
+    """Escape a value for safe HTML attribute content.
+
+    转义值以安全用作 HTML 属性内容。
+    """
     return html.escape(str(value), quote=True)

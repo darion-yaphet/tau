@@ -1,4 +1,7 @@
-"""OAuth helpers for subscription-backed coding providers."""
+"""OAuth helpers for subscription-backed coding providers.
+
+由订阅支持的编码提供商所用的 OAuth 辅助工具。
+"""
 
 from __future__ import annotations
 
@@ -47,7 +50,10 @@ type ProgressCallback = Callable[[str], None]
 
 @dataclass(frozen=True, slots=True)
 class AuthorizationCode:
-    """Parsed OAuth authorization callback data."""
+    """Parsed OAuth authorization callback data.
+
+    解析后的 OAuth 授权回调数据。
+    """
 
     code: str | None = None
     state: str | None = None
@@ -55,7 +61,10 @@ class AuthorizationCode:
 
 @dataclass(frozen=True, slots=True)
 class AuthorizationFlow:
-    """OpenAI Codex OAuth authorization flow state."""
+    """OpenAI Codex OAuth authorization flow state.
+
+    OpenAI Codex OAuth 授权流程状态。
+    """
 
     verifier: str
     state: str
@@ -64,7 +73,10 @@ class AuthorizationFlow:
 
 @dataclass(frozen=True, slots=True)
 class TokenResponse:
-    """Successful OAuth token response."""
+    """Successful OAuth token response.
+
+    成功的 OAuth 令牌响应。
+    """
 
     access: str
     refresh: str
@@ -72,11 +84,17 @@ class TokenResponse:
 
 
 class OAuthError(RuntimeError):
-    """Raised when an OAuth flow cannot complete."""
+    """Raised when an OAuth flow cannot complete.
+
+    OAuth 流程无法完成时抛出的异常。
+    """
 
 
 class OpenAICodexOAuthProvider:
-    """Registered OpenAI Codex subscription OAuth behavior."""
+    """Registered OpenAI Codex subscription OAuth behavior.
+
+    已注册的 OpenAI Codex 订阅 OAuth 行为。
+    """
 
     id = OPENAI_CODEX_OAUTH_PROVIDER
     name = "OpenAI Codex (ChatGPT subscription)"
@@ -113,23 +131,35 @@ class _LocalOAuthServer:
         self._future = future
 
     async def wait_for_code(self) -> str | None:
-        """Wait for the local callback server to receive a code."""
+        """Wait for the local callback server to receive a code.
+
+        等待本地回调服务器接收授权代码。
+        """
         return await self._future
 
     def cancel_wait(self) -> None:
-        """Resolve the pending wait without an authorization code."""
+        """Resolve the pending wait without an authorization code.
+
+        在没有授权代码的情况下结束待处理等待。
+        """
         if not self._future.done():
             self._future.set_result(None)
 
     def close(self) -> None:
-        """Stop the local callback server."""
+        """Stop the local callback server.
+
+        停止本地回调服务器。
+        """
         self._server.shutdown()
         self._server.server_close()
         self._thread.join(timeout=1)
 
 
 def create_pkce_pair() -> tuple[str, str]:
-    """Return a PKCE verifier and S256 challenge."""
+    """Return a PKCE verifier and S256 challenge.
+
+    返回 PKCE 校验器和 S256 挑战值。
+    """
     verifier = secrets.token_urlsafe(64)
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
     challenge = _base64url(digest)
@@ -140,7 +170,10 @@ def create_openai_codex_authorization_flow(
     *,
     originator: str = "tau",
 ) -> AuthorizationFlow:
-    """Create an OpenAI Codex OAuth authorization URL."""
+    """Create an OpenAI Codex OAuth authorization URL.
+
+    创建 OpenAI Codex OAuth 授权 URL。
+    """
     verifier, challenge = create_pkce_pair()
     state = secrets.token_hex(16)
     params = {
@@ -163,7 +196,10 @@ def create_openai_codex_authorization_flow(
 
 
 def parse_authorization_input(value: str) -> AuthorizationCode:
-    """Parse a pasted redirect URL, query string, code#state pair, or raw code."""
+    """Parse a pasted redirect URL, query string, code#state pair, or raw code.
+
+    解析粘贴的重定向 URL、查询字符串、code#state 对或原始代码。
+    """
     stripped = value.strip()
     if not stripped:
         return AuthorizationCode()
@@ -191,7 +227,10 @@ def parse_authorization_input(value: str) -> AuthorizationCode:
 
 
 def oauth_credential_is_expired(credential: OAuthCredential) -> bool:
-    """Return whether an OAuth credential should be refreshed before use."""
+    """Return whether an OAuth credential should be refreshed before use.
+
+    返回 OAuth 凭据在使用前是否应刷新。
+    """
     return int(time.time() * 1000) >= credential.expires - TOKEN_REFRESH_SKEW_MS
 
 
@@ -205,7 +244,10 @@ async def login_openai_codex(
     originator: str = "tau",
     client: httpx.AsyncClient | None = None,
 ) -> OAuthCredential:
-    """Run OpenAI Codex OAuth and return refreshable credentials."""
+    """Run OpenAI Codex OAuth and return refreshable credentials.
+
+    运行 OpenAI Codex OAuth 并返回可刷新的凭据。
+    """
     flow = create_openai_codex_authorization_flow(originator=originator)
     server = await _start_local_oauth_server(flow.state)
 
@@ -259,7 +301,10 @@ async def exchange_openai_codex_authorization_code(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> TokenResponse:
-    """Exchange an OpenAI Codex authorization code for OAuth tokens."""
+    """Exchange an OpenAI Codex authorization code for OAuth tokens.
+
+    使用 OpenAI Codex 授权代码交换 OAuth 令牌。
+    """
     raw = await _post_openai_codex_token(
         {
             "grant_type": "authorization_code",
@@ -285,7 +330,10 @@ async def refresh_openai_codex_token(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> OAuthCredential:
-    """Refresh OpenAI Codex OAuth credentials."""
+    """Refresh OpenAI Codex OAuth credentials.
+
+    刷新 OpenAI Codex OAuth 凭据。
+    """
     raw = await _post_openai_codex_token(
         {
             "grant_type": "refresh_token",
@@ -309,7 +357,10 @@ async def refresh_openai_codex_token(
 
 
 def account_id_from_access_token(access_token: str) -> str | None:
-    """Extract the ChatGPT account id from an OpenAI Codex access JWT."""
+    """Extract the ChatGPT account id from an OpenAI Codex access JWT.
+
+    从 OpenAI Codex 访问 JWT 中提取 ChatGPT 账户 ID。
+    """
     payload = _access_token_payload(access_token)
     if payload is None:
         return None

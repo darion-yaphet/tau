@@ -1,6 +1,11 @@
-"""Portable Pi-compatible agent harness primitives for Tau."""
+"""Portable Pi-compatible agent harness primitives for Tau.
+
+Tau 的可移植、兼容 Pi 的智能体框架基础组件。
+"""
 
 # ruff: noqa: F401 - this module intentionally defines the public facade
+#
+# 此模块特意定义公开门面，因此忽略 F401。
 
 from tau_agent.events import (
     AgentEndEvent,

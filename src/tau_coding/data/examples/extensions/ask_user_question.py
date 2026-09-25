@@ -1,6 +1,10 @@
 """Let the agent ask the user a multiple-choice question.
 
+允许代理向用户提出多项选择题。
+
 Install by copying into `~/.tau/extensions/`, or run:
+
+可将其复制到 `~/.tau/extensions/` 安装，或运行：
 
     tau -e examples/extensions/ask_user_question.py
 """
@@ -19,6 +23,10 @@ from tau_coding.extensions import ExtensionAPI
 
 
 def _result(text: str, *, selected: str | None = None) -> AgentToolResult:
+    """Build one structured tool result for the question flow.
+
+    为提问流程构建一个结构化工具结果。
+    """
     return AgentToolResult(
         content=[TextContent(text=text)],
         details={"selected": selected},
@@ -26,7 +34,10 @@ def _result(text: str, *, selected: str | None = None) -> AgentToolResult:
 
 
 def setup(tau: ExtensionAPI) -> None:
-    """Register the ask_user_question tool."""
+    """Register the ask_user_question tool.
+
+    注册 ask_user_question 工具。
+    """
 
     async def ask_user_question(
         tool_call_id: str,
@@ -34,6 +45,10 @@ def setup(tau: ExtensionAPI) -> None:
         signal: ToolCancellationToken | None = None,
         on_update: ToolUpdateCallback | None = None,
     ) -> AgentToolResult:
+        """Validate choices, prompt through the UI, and return the selection.
+
+        校验选项、通过 UI 提示用户并返回选择结果。
+        """
         del tool_call_id, signal, on_update
 
         question = arguments.get("question")

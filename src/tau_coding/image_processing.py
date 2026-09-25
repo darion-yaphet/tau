@@ -1,4 +1,7 @@
-"""Bounded image detection and normalization for coding-tool attachments."""
+"""Bounded image detection and normalization for coding-tool attachments.
+
+为编码工具附件提供有界的图像检测与规范化。
+"""
 
 from __future__ import annotations
 
@@ -20,7 +23,10 @@ type PngKind = Literal["static", "animated", "invalid"]
 
 @dataclass(frozen=True, slots=True)
 class ProcessedImage:
-    """Provider-safe encoded image and notes about transformations applied."""
+    """Provider-safe encoded image and notes about transformations applied.
+
+    提供商可安全接收的编码图像及其转换说明。
+    """
 
     data: bytes
     mime_type: str
@@ -31,13 +37,19 @@ class ProcessedImage:
 
 @dataclass(frozen=True, slots=True)
 class ImageProcessingFailure:
-    """Safe user-facing reason why an image attachment was omitted."""
+    """Safe user-facing reason why an image attachment was omitted.
+
+    图像附件被省略时可安全展示给用户的原因。
+    """
 
     message: str
 
 
 def detect_image_family_mime_type(data: bytes) -> str | None:
-    """Identify a known image family from the minimum available magic bytes."""
+    """Identify a known image family from the minimum available magic bytes.
+
+    使用尽可能少的可用魔数识别已知图像家族。
+    """
     if data.startswith(b"\xff\xd8\xff\xf7"):
         return "image/jxl"
     if data.startswith(b"\xff\xd8\xff"):
@@ -54,7 +66,10 @@ def detect_image_family_mime_type(data: bytes) -> str | None:
 
 
 def unsupported_image_reason(data: bytes) -> str | None:
-    """Explain recognized image variants that Tau intentionally cannot attach."""
+    """Explain recognized image variants that Tau intentionally cannot attach.
+
+    说明 Tau 有意不支持附加的已识别图像变体。
+    """
     if data.startswith(b"\xff\xd8\xff\xf7"):
         return "JPEG XL images are not supported"
     if data.startswith(PNG_SIGNATURE) and _classify_png(data) == "animated":
@@ -63,7 +78,10 @@ def unsupported_image_reason(data: bytes) -> str | None:
 
 
 def detect_supported_image_mime_type(data: bytes) -> str | None:
-    """Detect a supported image from its bytes while rejecting unsafe variants."""
+    """Detect a supported image from its bytes while rejecting unsafe variants.
+
+    根据字节检测受支持图像，同时拒绝不安全的变体。
+    """
     if data.startswith(b"\xff\xd8\xff"):
         return None if data.startswith(b"\xff\xd8\xff\xf7") else "image/jpeg"
     if data.startswith(PNG_SIGNATURE):
@@ -91,7 +109,12 @@ def process_image(
     max_source_bytes: int = DEFAULT_MAX_SOURCE_IMAGE_BYTES,
     max_source_pixels: int = DEFAULT_MAX_SOURCE_PIXELS,
 ) -> ProcessedImage | ImageProcessingFailure:
-    """Validate and, when needed, normalize an image within deterministic limits."""
+    """Validate and, when needed, normalize an image within deterministic limits.
+
+    在确定性限制内校验图像，并在需要时进行规范化。
+    """
+    # Reject oversized or invalid sources before decoding full pixel data.
+    # 在解码完整像素数据前拒绝过大或无效的源图像。
     if len(data) > max_source_bytes:
         return ImageProcessingFailure(
             f"source is {_format_size(len(data))}, exceeding the "
@@ -115,6 +138,8 @@ def process_image(
             "processing limit"
         )
 
+    # Preserve acceptable images; otherwise convert or resize in bounded attempts.
+    # 保留符合要求的图像；否则在有界次数内执行转换或缩放。
     requires_conversion = mime_type == "image/bmp"
     requires_resize = width > max_dimension or height > max_dimension or len(data) > max_bytes
     if not requires_conversion and not requires_resize:
@@ -179,6 +204,10 @@ def process_image(
 
 
 def _validated_image_metadata(data: bytes) -> tuple[int, int, bool]:
+    """Decode and validate image dimensions and animation metadata.
+
+    解码并校验图像尺寸与动画元数据。
+    """
     with warnings.catch_warnings():
         warnings.simplefilter("error", Image.DecompressionBombWarning)
         with Image.open(BytesIO(data)) as image:
@@ -191,6 +220,10 @@ def _validated_image_metadata(data: bytes) -> tuple[int, int, bool]:
 
 
 def _encode_image(image: Image.Image, mime_type: str, attempt: int) -> bytes:
+    """Encode an image using format-specific settings for one resize attempt.
+
+    使用特定格式的设置编码一次缩放尝试中的图像。
+    """
     output = BytesIO()
     if mime_type == "image/jpeg":
         quality = max(45, 90 - attempt * 8)
@@ -206,11 +239,19 @@ def _encode_image(image: Image.Image, mime_type: str, attempt: int) -> bytes:
 
 
 def _bounded_dimensions(width: int, height: int, maximum: int) -> tuple[int, int]:
+    """Scale dimensions proportionally so neither exceeds the maximum.
+
+    按比例缩放尺寸，使任一边都不超过上限。
+    """
     scale = min(1.0, maximum / width, maximum / height)
     return max(1, int(width * scale)), max(1, int(height * scale))
 
 
 def _classify_png(data: bytes) -> PngKind:
+    """Classify PNG bytes as static, animated, or invalid.
+
+    将 PNG 字节分类为静态、动画或无效。
+    """
     if len(data) < 33 or int.from_bytes(data[8:12], "big") != 13 or data[12:16] != b"IHDR":
         return "invalid"
     offset = len(PNG_SIGNATURE)
@@ -229,6 +270,10 @@ def _classify_png(data: bytes) -> PngKind:
 
 
 def _is_valid_bmp_header(data: bytes) -> bool:
+    """Return whether bytes contain a supported and internally valid BMP header.
+
+    返回字节是否包含受支持且内部有效的 BMP 头。
+    """
     if len(data) < 30:
         return False
     declared_size = int.from_bytes(data[2:6], "little")
@@ -250,4 +295,8 @@ def _is_valid_bmp_header(data: bytes) -> bool:
 
 
 def _format_size(size: int) -> str:
+    """Format a byte count as a compact megabyte value.
+
+    将字节数格式化为简洁的兆字节值。
+    """
     return f"{size / (1024 * 1024):.1f}MB"

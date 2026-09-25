@@ -1,4 +1,7 @@
-"""Provider-safe repair of malformed tool-call message history."""
+"""Provider-safe repair of malformed tool-call message history.
+
+以模型提供者安全的方式修复格式异常的工具调用消息历史。
+"""
 
 from __future__ import annotations
 
@@ -18,7 +21,10 @@ _INTERRUPTED_TOOL_RESULT = "Tool call interrupted by user"
 
 @dataclass(frozen=True, slots=True)
 class ToolHistoryRepair:
-    """A provider-safe transcript plus a summary of deterministic repairs."""
+    """A provider-safe transcript plus a summary of deterministic repairs.
+
+    一份对模型提供者安全的记录，以及确定性修复的摘要。
+    """
 
     messages: tuple[AgentMessage, ...]
     changed: bool = False
@@ -28,7 +34,10 @@ class ToolHistoryRepair:
     reordered_results: int = 0
 
     def diagnostic_data(self) -> dict[str, int]:
-        """Return JSON-safe counters for durable session diagnostics."""
+        """Return JSON-safe counters for durable session diagnostics.
+
+        返回可安全序列化为 JSON 的计数器，用于持久会话诊断。
+        """
         return {
             "synthesizedResults": self.synthesized_results,
             "droppedOrphanResults": self.dropped_orphan_results,
@@ -40,11 +49,20 @@ class ToolHistoryRepair:
 def repair_tool_history(messages: tuple[AgentMessage, ...]) -> ToolHistoryRepair:
     """Return history where every tool call has exactly one adjacent result.
 
+    返回修复后的历史，使每个工具调用都恰好有一个相邻结果。
+
     Existing result messages are moved beside their calls. Missing results get a
     deterministic interruption error. Results with no call are omitted because
     a missing call's arguments cannot be reconstructed safely. When duplicate
     results exist, a real result is preferred over Tau's synthetic interruption.
+
+    现有结果消息会被移到对应调用旁边。缺失的结果会获得确定性中断错误。
+    由于无法安全重建缺失调用的参数，没有对应调用的结果会被忽略。
+    存在重复结果时，优先使用真实结果，而非 Tau 合成的中断结果。
     """
+    # Index every tool-call occurrence and every available result by position.
+
+    # 按位置为每个工具调用出现项和每个可用结果建立索引。
     call_occurrences: list[tuple[tuple[int, int], ToolCall, int]] = []
     for message_index, message in enumerate(messages):
         if not isinstance(message, AssistantMessage):
@@ -64,6 +82,9 @@ def repair_tool_history(messages: tuple[AgentMessage, ...]) -> ToolHistoryRepair
 
     # Reserve already-adjacent pairs first. This keeps valid repeated IDs paired
     # with their own turn rather than letting an earlier occurrence consume them.
+
+    # 先保留已相邻的配对。这会使有效的重复 ID 与各自轮次保持配对，
+    # 避免它们被更早的出现项占用。
     for occurrence, call, expected_position in call_occurrences:
         if expected_position >= len(messages):
             continue
@@ -76,6 +97,9 @@ def repair_tool_history(messages: tuple[AgentMessage, ...]) -> ToolHistoryRepair
             selected_results[occurrence] = (expected_position, candidate)
             used_result_positions.add(expected_position)
 
+    # Match remaining calls to real results, or synthesize interruption results.
+
+    # 将剩余调用与真实结果匹配，或合成中断结果。
     synthesized_results = 0
     for occurrence, call, _expected_position in call_occurrences:
         if occurrence in selected_results:
@@ -112,6 +136,9 @@ def repair_tool_history(messages: tuple[AgentMessage, ...]) -> ToolHistoryRepair
 
     # If every call occurrence is already paired and a real extra result remains,
     # prefer it over a selected synthetic interruption for the same ID.
+
+    # 如果每个调用出现项都已配对，但仍有额外真实结果，
+    # 则对同一 ID 优先使用该真实结果，而非已选中的合成中断结果。
     for occurrence, call, _expected_position in call_occurrences:
         selected_position, selected_result = selected_results[occurrence]
         if selected_position is None or not _is_interruption_result(selected_result):
@@ -131,6 +158,9 @@ def repair_tool_history(messages: tuple[AgentMessage, ...]) -> ToolHistoryRepair
         used_result_positions.add(replacement[0])
         selected_results[occurrence] = replacement
 
+    # Rebuild the transcript with one selected result immediately after each call.
+
+    # 重建记录，使每个调用后立即跟随一个选定结果。
     repaired: list[AgentMessage] = []
     reordered_results = 0
     for message_index, message in enumerate(messages):
@@ -166,4 +196,8 @@ def repair_tool_history(messages: tuple[AgentMessage, ...]) -> ToolHistoryRepair
 
 
 def _is_interruption_result(message: ToolResultMessage) -> bool:
+    """Return whether a result is Tau's synthetic interruption marker.
+
+    返回结果是否为 Tau 合成的中断标记。
+    """
     return message.is_error and message.text == _INTERRUPTED_TOOL_RESULT

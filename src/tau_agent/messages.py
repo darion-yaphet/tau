@@ -1,5 +1,7 @@
 """Pi-compatible provider-neutral content and transcript message models."""
 
+# 与 Pi 兼容且不绑定提供商的内容与会话消息模型。
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -11,6 +13,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from tau_agent.types import JSONValue
 
 
+# Convert a snake-case field name to the camel-case wire format.
+#
+# 将蛇形字段名转换为线上的驼峰格式。
 def _to_camel(name: str) -> str:
     parts = name.split("_")
     return parts[0] + "".join(part.title() for part in parts[1:])
@@ -18,11 +23,15 @@ def _to_camel(name: str) -> str:
 
 def current_timestamp_ms() -> int:
     """Return the current Unix timestamp in milliseconds."""
+
+    # 返回以毫秒为单位的当前 Unix 时间戳。
     return int(time() * 1000)
 
 
 class WireModel(BaseModel):
     """Strict model with Python field names and Pi-compatible JSON aliases."""
+
+    # 使用 Python 字段名及与 Pi 兼容的 JSON 别名的严格模型。
 
     model_config = ConfigDict(
         extra="forbid",
@@ -36,6 +45,8 @@ class WireModel(BaseModel):
 class UsageCost(WireModel):
     """Billed response cost in USD."""
 
+    # 以美元计费的响应成本。
+
     input: float = 0.0
     output: float = 0.0
     cache_read: float = 0.0
@@ -45,6 +56,8 @@ class UsageCost(WireModel):
 
 class Usage(WireModel):
     """Provider-reported token usage for one assistant response."""
+
+    # 提供商报告的单次助手响应令牌用量。
 
     input: int = 0
     output: int = 0
@@ -58,8 +71,13 @@ class Usage(WireModel):
 
 def sum_usage(usages: Iterable[Usage]) -> Usage:
     """Return the field-wise total for one or more provider requests."""
+
+    # 按字段汇总一个或多个提供商请求的用量。
     items = tuple(usages)
 
+    # Sum an optional usage field while preserving an all-missing result.
+    #
+    # 汇总可选用量字段，并在所有值均缺失时保留缺失结果。
     def optional_total(field: Literal["cache_write_1h", "reasoning"]) -> int | None:
         values = [getattr(item, field) for item in items]
         return (
@@ -89,6 +107,8 @@ def sum_usage(usages: Iterable[Usage]) -> Usage:
 class ResponseTiming(WireModel):
     """Monotonic request durations for one assistant response."""
 
+    # 单次助手响应的单调时钟请求耗时。
+
     time_to_first_output_ms: int | None = Field(default=None, ge=0)
     total_duration_ms: int = Field(ge=0)
 
@@ -115,6 +135,8 @@ class ImageContent(WireModel):
 class ToolCall(WireModel):
     """A tool call content block requested by the assistant."""
 
+    # 助手请求的工具调用内容块。
+
     type: Literal["toolCall"] = "toolCall"
     id: str
     name: str
@@ -133,6 +155,9 @@ class UserMessage(WireModel):
     timestamp: int = Field(default_factory=current_timestamp_ms)
 
     @property
+    # Return the visible text carried by the user message.
+    #
+    # 返回用户消息携带的可见文本。
     def text(self) -> str:
         return content_text(self.content)
 
@@ -157,6 +182,8 @@ StopReason = Literal["stop", "length", "toolUse", "error", "aborted"]
 class AssistantMessage(WireModel):
     """A Pi-compatible assistant message with ordered content blocks."""
 
+    # 包含有序内容块且与 Pi 兼容的助手消息。
+
     role: Literal["assistant"] = "assistant"
     content: list[AssistantContent] = Field(default_factory=list)
     api: str = "unknown"
@@ -177,10 +204,18 @@ class AssistantMessage(WireModel):
     def _normalize_convenient_content(cls, value: object) -> object:
         """Accept a string only as a Python construction convenience.
 
+        仅为方便在 Python 中构造对象而接受字符串。
+
         The stored model and serialized protocol are always block based. This
         keeps provider and test construction concise without creating a second
         message representation.
+
+        存储模型和序列化协议始终以内容块为基础。这样既能简化提供商与测试中的
+        对象构造，又不会引入第二种消息表示形式。
         """
+        # Normalize shorthand input before Pydantic validates the canonical model.
+        #
+        # 在 Pydantic 校验规范模型前，将简写输入规范化。
         if not isinstance(value, dict):
             return value
         data = dict(value)
@@ -193,16 +228,25 @@ class AssistantMessage(WireModel):
         return data
 
     @property
+    # Concatenate all visible text blocks in their original order.
+    #
+    # 按原始顺序拼接所有可见文本块。
     def text(self) -> str:
         return "".join(block.text for block in self.content if isinstance(block, TextContent))
 
     @property
+    # Concatenate all thinking blocks in their original order.
+    #
+    # 按原始顺序拼接所有思考内容块。
     def thinking_text(self) -> str:
         return "".join(
             block.thinking for block in self.content if isinstance(block, ThinkingContent)
         )
 
     @property
+    # Return the ordered tool calls from the assistant content.
+    #
+    # 返回助手内容中按顺序排列的工具调用。
     def tool_calls(self) -> tuple[ToolCall, ...]:
         return tuple(block for block in self.content if isinstance(block, ToolCall))
 
@@ -219,6 +263,9 @@ class ToolResultMessage(WireModel):
 
     @model_validator(mode="before")
     @classmethod
+    # Normalize string shorthand into canonical tool-result content blocks.
+    #
+    # 将字符串简写规范化为标准工具结果内容块。
     def _normalize_convenient_content(cls, value: object) -> object:
         if not isinstance(value, dict):
             return value
@@ -229,6 +276,9 @@ class ToolResultMessage(WireModel):
         return data
 
     @property
+    # Return the visible text carried by the tool result.
+    #
+    # 返回工具结果携带的可见文本。
     def text(self) -> str:
         return content_text(self.content)
 
@@ -254,6 +304,9 @@ class CustomMessage(WireModel):
     timestamp: int = Field(default_factory=current_timestamp_ms)
 
     @property
+    # Return the visible text carried by the custom message.
+    #
+    # 返回自定义消息携带的可见文本。
     def text(self) -> str:
         return content_text(self.content)
 
@@ -289,6 +342,8 @@ def assistant_content(
     tool_calls: list[ToolCall] | tuple[ToolCall, ...] = (),
 ) -> list[AssistantContent]:
     """Build canonical ordered assistant blocks from parser accumulators."""
+
+    # 根据解析器累积结果构建标准的有序助手内容块。
     blocks: list[AssistantContent] = [TextContent(text=text)] if text else []
     blocks.extend(tool_calls)
     return blocks
@@ -296,6 +351,8 @@ def assistant_content(
 
 def content_text(content: str | list[Any]) -> str:
     """Return visible text from string or text/image content."""
+
+    # 从字符串或文本/图像内容中返回可见文本。
     if isinstance(content, str):
         return content
     return "".join(block.text for block in content if isinstance(block, TextContent))
@@ -303,11 +360,15 @@ def content_text(content: str | list[Any]) -> str:
 
 def message_to_user(message: AgentMessage) -> UserMessage:
     """Convert custom/session-only messages to provider-compatible user context."""
+
+    # 将自定义或仅用于会话的消息转换为提供商兼容的用户上下文。
     return UserMessage(content=message_text(message), timestamp=message.timestamp)
 
 
 def message_text(message: AgentMessage) -> str:
     """Return the user-visible text represented by an agent message."""
+
+    # 返回智能体消息所表示的用户可见文本。
     if isinstance(message, (UserMessage, AssistantMessage, ToolResultMessage, CustomMessage)):
         return message.text
     if isinstance(message, (BranchSummaryMessage, CompactionSummaryMessage)):

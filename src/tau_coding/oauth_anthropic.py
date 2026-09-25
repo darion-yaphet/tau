@@ -1,4 +1,7 @@
-"""Anthropic Claude Pro/Max OAuth provider."""
+"""Anthropic Claude Pro/Max OAuth provider.
+
+Anthropic Claude Pro/Max OAuth 提供商。
+"""
 
 from __future__ import annotations
 
@@ -40,6 +43,7 @@ ANTHROPIC_SCOPE = (
 ANTHROPIC_CALLBACK_PORT = 53692
 ANTHROPIC_TOKEN_SKEW_MS = 5 * 60 * 1000
 # Token-request fields worth scrubbing out of anything the server echoes back.
+# 应从服务器回显内容中清除的令牌请求字段。
 _SECRET_REQUEST_FIELDS = ("refresh_token", "code", "code_verifier")
 
 
@@ -52,7 +56,10 @@ async def login_anthropic(
     open_browser: bool = True,
     client: httpx.AsyncClient | None = None,
 ) -> OAuthCredential:
-    """Run Anthropic's authorization-code + PKCE login flow."""
+    """Run Anthropic's authorization-code + PKCE login flow.
+
+    运行 Anthropic 的授权代码加 PKCE 登录流程。
+    """
     verifier, challenge = create_pkce_pair()
     params = {
         "code": "true",
@@ -120,7 +127,10 @@ async def refresh_anthropic_token(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> OAuthCredential:
-    """Refresh Anthropic OAuth credentials."""
+    """Refresh Anthropic OAuth credentials.
+
+    刷新 Anthropic OAuth 凭据。
+    """
     return await _anthropic_token_request(
         {
             "grant_type": "refresh_token",
@@ -177,6 +187,8 @@ async def _anthropic_token_request(
 def _error_detail(response: httpx.Response, *, secrets: Iterable[str] = ()) -> str:
     """Summarize a token-endpoint failure body.
 
+    汇总令牌端点的失败响应体。
+
     The endpoint explains itself ("invalid_grant: Refresh token not found or
     invalid"); reporting only the status code turns a self-describing failure
     into a guessing game. Only the structured OAuth error fields are surfaced —
@@ -184,6 +196,11 @@ def _error_detail(response: httpx.Response, *, secrets: Iterable[str] = ()) -> s
     the token it was sent. Those fields are server-controlled too, so anything
     we sent is scrubbed back out and the result is truncated before it reaches
     a log or the TUI.
+
+    端点会自行说明错误（“invalid_grant: Refresh token not found or invalid”）；仅报告
+    状态码会把自描述故障变成猜谜。这里只展示结构化 OAuth 错误字段，原始响应体不会
+    进入消息，因为失败请求可能回显发送给它的令牌。这些字段也由服务器控制，因此会
+    再次清除我们发送的任何内容，并在结果进入日志或 TUI 前截断。
     """
     try:
         raw = response.json()
@@ -201,8 +218,13 @@ def _error_detail(response: httpx.Response, *, secrets: Iterable[str] = ()) -> s
 def _error_fields(raw: dict[str, Any]) -> str | None:
     """Pull the error code and message out of either error envelope.
 
+    从任一种错误封装中提取错误代码和消息。
+
     OAuth failures arrive as flat ``error``/``error_description``, while the
     Anthropic API's own shape nests them under ``error`` as ``type``/``message``.
+
+    OAuth 故障以扁平的 ``error``/``error_description`` 形式到达，而 Anthropic API
+    自己的结构会把 ``type``/``message`` 嵌套在 ``error`` 下。
     """
     error = raw.get("error")
     description = raw.get("error_description") or raw.get("message")
@@ -254,7 +276,10 @@ def _optional_string(raw: dict[str, Any], name: str) -> str | None:
 
 
 class AnthropicOAuthProvider:
-    """Registered Anthropic Claude subscription OAuth behavior."""
+    """Registered Anthropic Claude subscription OAuth behavior.
+
+    已注册的 Anthropic Claude 订阅 OAuth 行为。
+    """
 
     id = ANTHROPIC_OAUTH_PROVIDER
     name = "Anthropic (Claude Pro/Max)"

@@ -1,6 +1,11 @@
-"""Provider and Pi-compatible model streaming layer for Tau."""
+"""Provider and Pi-compatible model streaming layer for Tau.
+
+Tau 的模型提供者与 Pi 兼容流式处理层。
+"""
 
 # ruff: noqa: F401 - this module intentionally defines the public facade
+#
+# 此模块特意定义公开门面，因此忽略 F401。
 
 from tau_ai.anthropic import AnthropicProvider
 from tau_ai.env import (

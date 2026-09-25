@@ -1,4 +1,7 @@
-"""Built-in provider catalog for Tau login/setup flows."""
+"""Built-in provider catalog for Tau login/setup flows.
+
+Tau 登录和设置流程使用的内置提供商目录。
+"""
 
 from __future__ import annotations
 
@@ -30,7 +33,10 @@ AuthMethod = Literal["api_key", "oauth"]
 
 @dataclass(frozen=True, slots=True)
 class ModelCostTier:
-    """Model rates that apply up to an optional input-token limit."""
+    """Model rates that apply up to an optional input-token limit.
+
+    适用于可选输入令牌上限的模型费率。
+    """
 
     cost: dict[str, float]
     max_input_tokens: int | None = None
@@ -38,7 +44,10 @@ class ModelCostTier:
 
 @dataclass(frozen=True, slots=True)
 class ModelCatalogMetadata:
-    """Provider-catalog metadata for a single model."""
+    """Provider-catalog metadata for a single model.
+
+    单个模型的提供商目录元数据。
+    """
 
     name: str | None = None
     api: ProviderApi | None = None
@@ -58,7 +67,10 @@ def model_cost_for_input_tokens(
     metadata: ModelCatalogMetadata,
     input_tokens: int,
 ) -> dict[str, float] | None:
-    """Return model rates for an input size, falling back to the flat base cost."""
+    """Return model rates for an input size, falling back to the flat base cost.
+
+    返回指定输入规模对应的模型费率，未匹配时回退到固定基础费率。
+    """
     if not isinstance(input_tokens, int) or isinstance(input_tokens, bool) or input_tokens < 0:
         raise ValueError("input_tokens must be a non-negative integer")
     for tier in metadata.cost_tiers:
@@ -69,7 +81,10 @@ def model_cost_for_input_tokens(
 
 @dataclass(frozen=True, slots=True)
 class ProviderCatalogEntry:
-    """A built-in provider Tau can present during login."""
+    """A built-in provider Tau can present during login.
+
+    Tau 可在登录期间展示的内置提供商。
+    """
 
     name: str
     display_name: str
@@ -95,6 +110,7 @@ class ProviderCatalogEntry:
 
 def _load_builtin_catalog() -> tuple[ProviderCatalogEntry, ...]:
     # Imported lazily: catalog_loader imports ProviderCatalogEntry from this module.
+    # 延迟导入：catalog_loader 会从此模块导入 ProviderCatalogEntry。
     from tau_coding.catalog_loader import builtin_catalog
 
     return builtin_catalog()
@@ -104,7 +120,10 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = _load_builtin_catal
 
 
 def builtin_provider_entry(name: str) -> ProviderCatalogEntry | None:
-    """Return a built-in catalog entry by provider name."""
+    """Return a built-in catalog entry by provider name.
+
+    按提供商名称返回内置目录条目。
+    """
     for entry in BUILTIN_PROVIDER_CATALOG:
         if entry.name == name:
             return entry

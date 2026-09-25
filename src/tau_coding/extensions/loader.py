@@ -1,4 +1,7 @@
-"""Extension discovery and module loading."""
+"""Extension discovery and module loading.
+
+扩展发现与模块加载。
+"""
 
 from __future__ import annotations
 
@@ -24,7 +27,10 @@ ExtensionSource = Literal["built-in", "user", "explicit", "project"]
 
 @dataclass(frozen=True, slots=True)
 class DiscoveredExtension:
-    """A discovered extension entry file before loading."""
+    """A discovered extension entry file before loading.
+
+    加载前发现的扩展入口文件。
+    """
 
     name: str
     path: Path
@@ -35,7 +41,10 @@ class DiscoveredExtension:
 
 @dataclass(frozen=True, slots=True)
 class LoadedExtension:
-    """A successfully imported extension module and its entry point."""
+    """A successfully imported extension module and its entry point.
+
+    成功导入的扩展模块及其入口点。
+    """
 
     name: str
     path: Path | None
@@ -47,7 +56,10 @@ class LoadedExtension:
 
 @dataclass(frozen=True, slots=True)
 class ExtensionSourceMetadata:
-    """Non-executable provenance retained for one active extension source."""
+    """Non-executable provenance retained for one active extension source.
+
+    为一个活动扩展源保留的不可执行来源信息。
+    """
 
     name: str
     source_id: str
@@ -58,7 +70,10 @@ class ExtensionSourceMetadata:
 
 @dataclass(frozen=True, slots=True)
 class ExtensionLoadResult:
-    """Loaded extensions plus non-fatal discovery/load diagnostics."""
+    """Loaded extensions plus non-fatal discovery/load diagnostics.
+
+    已加载扩展及非致命发现或加载诊断。
+    """
 
     extensions: tuple[LoadedExtension, ...]
     diagnostics: tuple[ResourceDiagnostic, ...]
@@ -191,7 +206,10 @@ def load_extensions(
     include_project_dir: bool = False,
     include_user_dir: bool = True,
 ) -> ExtensionLoadResult:
-    """Discover and import extensions, isolating per-extension failures."""
+    """Discover and import extensions, isolating per-extension failures.
+
+    发现并导入扩展，同时隔离各扩展的故障。
+    """
     discovered, diagnostics = discover_extensions(
         paths,
         extra_paths=extra_paths,
@@ -202,6 +220,8 @@ def load_extensions(
     # Discovery freezes every source before any import. Extension code may
     # mutate entry or parent symlinks during import/setup, but ownership stays
     # tied to the canonical source selected by the host.
+    # 在任何导入前冻结所有发现的源。扩展代码可能在导入或设置期间修改入口或父级符号链接，
+    # 但所有权仍绑定到宿主选择的规范源。
     loaded: list[LoadedExtension] = []
     all_diagnostics = list(diagnostics)
     for entry in discovered:
@@ -303,6 +323,8 @@ def _manifest_entries(
         # Manifest entries always load as packages: the manifest exists to
         # point at structured layouts (e.g. src/<pkg>/extension.py), where
         # sibling modules must stay reachable through relative imports.
+        # 清单条目始终作为包加载：清单用于指向结构化布局，因此同级模块必须可通过相对
+        # 导入访问。
         name = entry_file.parent.name if entry_file.stem == "extension" else entry_file.stem
         entries.append(
             DiscoveredExtension(name=name, path=entry_file, package_dir=entry_file.parent)
@@ -321,6 +343,8 @@ def _load_extension(
 
     # Directory extensions load as real packages so sibling modules are
     # reachable with relative imports and stay namespaced in sys.modules.
+    # 目录扩展作为真实包加载，使同级模块可通过相对导入访问，并在 sys.modules 中保持
+    # 命名空间隔离。
     search_locations = [str(entry.package_dir)] if entry.package_dir is not None else None
     spec = spec_from_file_location(
         module_name,

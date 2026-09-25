@@ -1,7 +1,12 @@
 """Safe, user-level state for the trusted llama.cpp integration.
 
+可信 llama.cpp 集成的安全用户级状态。
+
 Only endpoint-keyed discovery metadata lives here.  Credentials are kept in
 Tau's credential store and are referenced by an opaque generation name.
+
+这里只保存以端点为键的发现元数据。凭据保存在 Tau 的凭据存储中，并通过不透明的代际
+名称引用。
 """
 
 from __future__ import annotations
@@ -22,12 +27,18 @@ LLAMA_CPP_CREDENTIAL_PREFIX = "llama.cpp:"
 
 
 class LlamaCppStateError(RuntimeError):
-    """Raised for an unreadable or unsupported llama.cpp state file."""
+    """Raised for an unreadable or unsupported llama.cpp state file.
+
+    llama.cpp 状态文件不可读或不受支持时抛出的异常。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class LlamaCppStoredModel:
-    """Allowlisted model metadata safe to retain outside the server."""
+    """Allowlisted model metadata safe to retain outside the server.
+
+    可安全保留在服务器外的允许列表模型元数据。
+    """
 
     id: str
     display_name: str | None = None
@@ -35,6 +46,10 @@ class LlamaCppStoredModel:
     input_modalities: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
+        """Validate stored model identity and allowlisted metadata.
+
+        校验已存储模型标识和允许列表元数据。
+        """
         if not isinstance(self.id, str) or not self.id or self.id != self.id.strip():
             raise LlamaCppStateError("Stored llama.cpp model id must be a non-empty exact string")
         if self.display_name is not None and (
@@ -56,6 +71,10 @@ class LlamaCppStoredModel:
                 raise LlamaCppStateError("Stored input modalities must be unique")
 
     def to_json(self) -> dict[str, object]:
+        """Serialize the allowlisted model metadata to JSON-compatible data.
+
+        将允许列表模型元数据序列化为 JSON 兼容数据。
+        """
         value: dict[str, object] = {"id": self.id}
         if self.display_name is not None:
             value["display_name"] = self.display_name
@@ -68,7 +87,10 @@ class LlamaCppStoredModel:
 
 @dataclass(frozen=True, slots=True)
 class LlamaCppIntegrationState:
-    """One endpoint's safe integration snapshot."""
+    """One endpoint's safe integration snapshot.
+
+    一个端点的安全集成快照。
+    """
 
     endpoint: str
     selected_model: str | None = None
@@ -77,6 +99,10 @@ class LlamaCppIntegrationState:
     checked_at: str | None = None
 
     def __post_init__(self) -> None:
+        """Validate endpoint, selection, credential reference, and models.
+
+        校验端点、选择、凭据引用和模型。
+        """
         if not isinstance(self.endpoint, str) or not self.endpoint.strip():
             raise LlamaCppStateError("Llama.cpp state endpoint must be non-empty")
         if self.selected_model is not None and (
@@ -101,10 +127,17 @@ class LlamaCppIntegrationState:
         # lets a cached/offline resume recover the exact model if the server
         # reports it again, while the provider layer keeps it unavailable until
         # then.
+        # 即使后续发现不再报告某模型，也保留所选引用。该引用并非可用性声明：它允许缓存
+        # 或离线恢复在服务器再次报告该模型时恢复精确模型，同时提供商层在此之前保持其
+        # 不可用状态。
         if self.checked_at is not None and not isinstance(self.checked_at, str):
             raise LlamaCppStateError("Checked timestamp must be a string or None")
 
     def to_json(self) -> dict[str, object]:
+        """Serialize the endpoint integration snapshot to JSON-compatible data.
+
+        将端点集成快照序列化为 JSON 兼容数据。
+        """
         return {
             "endpoint": self.endpoint,
             "selected_model": self.selected_model,
@@ -115,9 +148,15 @@ class LlamaCppIntegrationState:
 
 
 class LlamaCppStateStore:
-    """Locked and atomically replaced endpoint-keyed integration state."""
+    """Locked and atomically replaced endpoint-keyed integration state.
+
+    加锁并原子替换的、以端点为键的集成状态。
+    """
 
     def __init__(
+        # Initialize paths for a locked, endpoint-keyed state store.
+        #
+        # 初始化加锁且以端点为键的状态存储路径。
         self,
         path: Path | None = None,
         *,
@@ -129,16 +168,28 @@ class LlamaCppStateStore:
         self.lock_path = lock_path or self.path.with_name(f"{self.path.name}.lock")
 
     def get(self, endpoint: str) -> LlamaCppIntegrationState | None:
+        """Return the saved snapshot for one endpoint.
+
+        返回一个端点的已保存快照。
+        """
         with self._locked():
             _, endpoints = self._read_unlocked()
             return endpoints.get(endpoint)
 
     def active(self) -> LlamaCppIntegrationState | None:
+        """Return the currently selected endpoint snapshot.
+
+        返回当前选定端点的快照。
+        """
         with self._locked():
             active_endpoint, endpoints = self._read_unlocked()
             return endpoints.get(active_endpoint) if active_endpoint else None
 
     def all(self) -> tuple[LlamaCppIntegrationState, ...]:
+        """Return every saved endpoint snapshot.
+
+        返回所有已保存的端点快照。
+        """
         with self._locked():
             _, endpoints = self._read_unlocked()
             return tuple(endpoints.values())
@@ -151,9 +202,14 @@ class LlamaCppStateStore:
     ) -> None:
         """Publish one endpoint snapshot and make it the saved endpoint.
 
+        发布一个端点快照，并将其设为已保存端点。
+
         ``replace_endpoint`` lets configuration replace the prior active
         endpoint in the same atomic state-file transaction. Discovery updates
         omit it so a caller can retain endpoint-keyed snapshots when desired.
+
+        ``replace_endpoint`` 允许配置过程在同一次原子状态文件事务中替换之前的活动端点。
+        发现更新时会省略该参数，以便调用方根据需要保留按端点索引的快照。
         """
         with self._locked():
             active_endpoint, endpoints = self._read_unlocked()
@@ -164,7 +220,10 @@ class LlamaCppStateStore:
             self._write_unlocked(state.endpoint, endpoints)
 
     def remove(self, endpoint: str) -> tuple[str, ...]:
-        """Remove one endpoint and return credential refs no longer referenced."""
+        """Remove one endpoint and return credential refs no longer referenced.
+
+        移除一个端点，并返回不再被引用的凭据引用。
+        """
         with self._locked():
             active_endpoint, endpoints = self._read_unlocked()
             before = _credential_refs(endpoints.values())
@@ -174,7 +233,10 @@ class LlamaCppStateStore:
             return tuple(sorted(before - _credential_refs(endpoints.values())))
 
     def clear(self) -> tuple[str, ...]:
-        """Remove all integration settings, returning referenced credentials."""
+        """Remove all integration settings, returning referenced credentials.
+
+        移除所有集成设置，并返回原先被引用的凭据。
+        """
         with self._locked():
             _, endpoints = self._read_unlocked()
             refs = tuple(sorted(_credential_refs(endpoints.values())))
@@ -184,12 +246,20 @@ class LlamaCppStateStore:
             return refs
 
     def referenced_credentials(self) -> frozenset[str]:
+        """Return all credential references retained by saved snapshots.
+
+        返回已保存快照保留的所有凭据引用。
+        """
         with self._locked():
             _, endpoints = self._read_unlocked()
             return frozenset(_credential_refs(endpoints.values()))
 
     @contextmanager
     def _locked(self) -> Iterator[None]:
+        """Hold the cross-process state lock for one operation.
+
+        在一次操作期间持有跨进程状态锁。
+        """
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         if self.lock_path.parent != self.path.parent:
             self.lock_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -216,6 +286,9 @@ class LlamaCppStateStore:
             raise LlamaCppStateError(f"Could not access llama.cpp state: {exc}") from exc
 
     def _read_unlocked(
+        # Read and validate endpoint state while the caller holds the lock.
+        #
+        # 在调用方持锁期间读取并校验端点状态。
         self,
     ) -> tuple[str | None, dict[str, LlamaCppIntegrationState]]:
         if not self.path.exists():
@@ -268,6 +341,9 @@ class LlamaCppStateStore:
         return active_endpoint, endpoints
 
     def _write_unlocked(
+        # Atomically persist endpoint state while the caller holds the lock.
+        #
+        # 在调用方持锁期间原子持久化端点状态。
         self,
         active_endpoint: str | None,
         endpoints: Mapping[str, LlamaCppIntegrationState],
@@ -308,6 +384,10 @@ class LlamaCppStateStore:
 
 
 def _state_from_json(raw: Mapping[str, object]) -> LlamaCppIntegrationState:
+    """Parse one endpoint integration snapshot from JSON data.
+
+    从 JSON 数据解析一个端点集成快照。
+    """
     allowed = {"endpoint", "selected_model", "credential_ref", "models", "checked_at"}
     if set(raw) - allowed:
         raise LlamaCppStateError("Unknown field in llama.cpp endpoint state")
@@ -330,6 +410,10 @@ def _state_from_json(raw: Mapping[str, object]) -> LlamaCppIntegrationState:
 
 
 def _model_from_json(raw: object) -> LlamaCppStoredModel:
+    """Parse one allowlisted stored model from JSON data.
+
+    从 JSON 数据解析一个允许列表模型。
+    """
     if not isinstance(raw, dict):
         raise LlamaCppStateError("Malformed stored llama.cpp model")
     allowed = {"id", "display_name", "context_window", "input_modalities"}
@@ -347,10 +431,18 @@ def _model_from_json(raw: object) -> LlamaCppStoredModel:
 
 
 def _credential_refs(states: Iterable[LlamaCppIntegrationState]) -> set[str]:
+    """Collect credential references used by endpoint snapshots.
+
+    收集端点快照使用的凭据引用。
+    """
     return {state.credential_ref for state in states if state.credential_ref}
 
 
 def _valid_credential_ref(value: object) -> bool:
+    """Return whether a credential reference belongs to this integration.
+
+    返回凭据引用是否属于此集成。
+    """
     if not isinstance(value, str) or not value.startswith(LLAMA_CPP_CREDENTIAL_PREFIX):
         return False
     suffix = value.removeprefix(LLAMA_CPP_CREDENTIAL_PREFIX)
@@ -361,7 +453,10 @@ def _valid_credential_ref(value: object) -> bool:
 
 
 def _remove_temporary_files(path: Path) -> None:
-    """Remove only this store's interrupted atomic-write artifacts."""
+    """Remove only this store's interrupted atomic-write artifacts.
+
+    仅清理由此存储的原子写入中断留下的文件。
+    """
     pattern = f".{path.name}.*.tmp"
     for temporary in path.parent.glob(pattern):
         with suppress(OSError):
@@ -369,6 +464,10 @@ def _remove_temporary_files(path: Path) -> None:
 
 
 def _lock(handle: object) -> None:
+    """Acquire an exclusive platform-specific file lock.
+
+    获取平台专用的排他文件锁。
+    """
     try:
         import fcntl
 
@@ -382,6 +481,10 @@ def _lock(handle: object) -> None:
 
 
 def _unlock(handle: object) -> None:
+    """Release a platform-specific file lock.
+
+    释放平台专用文件锁。
+    """
     try:
         import fcntl
 
@@ -393,6 +496,10 @@ def _unlock(handle: object) -> None:
 
 
 def _fsync_directory(path: Path) -> None:
+    """Synchronize the containing directory when supported.
+
+    在平台支持时同步包含目录。
+    """
     with suppress(OSError):
         descriptor = os.open(path, os.O_RDONLY)
         try:

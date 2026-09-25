@@ -1,4 +1,7 @@
-"""System prompt assembly for Tau coding sessions."""
+"""System prompt assembly for Tau coding sessions.
+
+组装 Tau 编码会话的系统提示词。
+"""
 
 from __future__ import annotations
 
@@ -20,7 +23,10 @@ PromptSourceKind = Literal[
 
 @dataclass(frozen=True, slots=True)
 class ProjectContextFile:
-    """A project instruction file included in the system prompt."""
+    """A project instruction file included in the system prompt.
+
+    纳入系统提示词的项目指令文件。
+    """
 
     path: str
     content: str
@@ -28,7 +34,10 @@ class ProjectContextFile:
 
 @dataclass(frozen=True, slots=True)
 class PromptSection:
-    """A free-form section appended to the system prompt."""
+    """A free-form section appended to the system prompt.
+
+    追加到系统提示词的自由格式区段。
+    """
 
     title: str | None
     body: str
@@ -37,7 +46,10 @@ class PromptSection:
 
 @dataclass(frozen=True, slots=True)
 class SystemPromptSource:
-    """One contiguous, attributed section of an effective system prompt."""
+    """One contiguous, attributed section of an effective system prompt.
+
+    有效系统提示词中一段连续且标注来源的内容。
+    """
 
     kind: PromptSourceKind
     label: str
@@ -47,7 +59,10 @@ class SystemPromptSource:
 
 @dataclass(frozen=True, slots=True)
 class SystemPromptInspection:
-    """An effective system prompt paired with its ordered provenance."""
+    """An effective system prompt paired with its ordered provenance.
+
+    有效系统提示词及其有序来源信息。
+    """
 
     text: str
     sources: tuple[SystemPromptSource, ...]
@@ -55,7 +70,10 @@ class SystemPromptInspection:
 
 @dataclass(frozen=True, slots=True)
 class BuildSystemPromptOptions:
-    """Options used to build Tau's system prompt."""
+    """Options used to build Tau's system prompt.
+
+    用于构建 Tau 系统提示词的选项。
+    """
 
     cwd: Path
     tools: Sequence[AgentTool] = ()
@@ -71,12 +89,18 @@ class BuildSystemPromptOptions:
 
 
 def build_system_prompt(options: BuildSystemPromptOptions) -> str:
-    """Build a deterministic Pi-style system prompt for Tau."""
+    """Build a deterministic Pi-style system prompt for Tau.
+
+    为 Tau 构建确定性的 Pi 风格系统提示词。
+    """
     return build_system_prompt_inspection(options).text
 
 
 def build_system_prompt_inspection(options: BuildSystemPromptOptions) -> SystemPromptInspection:
-    """Build Tau's system prompt and attribute every contiguous section."""
+    """Build Tau's system prompt and attribute every contiguous section.
+
+    构建 Tau 的系统提示词，并为每个连续区段标注来源。
+    """
     current_date = options.current_date or date.today()
     cwd = _format_path(options.cwd)
     sources: list[SystemPromptSource] = []
@@ -121,6 +145,10 @@ def build_system_prompt_inspection(options: BuildSystemPromptOptions) -> SystemP
         )
 
     def add_sections(sections: Sequence[PromptSection], kind: PromptSourceKind) -> None:
+        """Append attributed free-form sections to the prompt source list.
+
+        将带来源信息的自由格式区段追加到提示词来源列表。
+        """
         for section in sections:
             sources.append(
                 SystemPromptSource(
@@ -160,7 +188,10 @@ def build_system_prompt_inspection(options: BuildSystemPromptOptions) -> SystemP
 
 
 def format_system_prompt_inspection(inspection: SystemPromptInspection) -> str:
-    """Render a Markdown source map for the local ``/system`` command."""
+    """Render a Markdown source map for the local ``/system`` command.
+
+    为本地 ``/system`` 命令渲染 Markdown 来源映射。
+    """
     sections: list[str] = []
     for index, source in enumerate(inspection.sources, start=1):
         origin = "".join(
@@ -180,14 +211,20 @@ def format_system_prompt_inspection(inspection: SystemPromptInspection) -> str:
 
 
 def format_prompt_section(section: PromptSection) -> str:
-    """Render one optional-title free-form prompt section."""
+    """Render one optional-title free-form prompt section.
+
+    渲染一个标题可选的自由格式提示词区段。
+    """
     if section.title is None:
         return section.body
     return f"## {section.title}\n\n{section.body}"
 
 
 def format_tau_documentation() -> str:
-    """Format Pi-style routing hints to Tau's installed reference material."""
+    """Format Pi-style routing hints to Tau's installed reference material.
+
+    格式化指向 Tau 已安装参考资料的 Pi 风格路由提示。
+    """
     readme_path = _format_path(tau_readme_path())
     docs_path = _format_path(tau_docs_path())
     examples_path = _format_path(tau_examples_path())
@@ -211,7 +248,10 @@ def format_tau_documentation() -> str:
 
 
 def format_available_tools(tools: Sequence[AgentTool]) -> str:
-    """Format visible tools using prompt snippets."""
+    """Format visible tools using prompt snippets.
+
+    使用提示词片段格式化可见工具。
+    """
     lines = [f"- {tool.name}: {tool.prompt_snippet}" for tool in tools if tool.prompt_snippet]
     return "\n".join(lines) if lines else "(none)"
 
@@ -219,12 +259,19 @@ def format_available_tools(tools: Sequence[AgentTool]) -> str:
 def collect_prompt_guidelines(
     tools: Sequence[AgentTool], extra_guidelines: Sequence[str] = ()
 ) -> list[str]:
-    """Collect and de-duplicate system prompt guidelines."""
+    """Collect and de-duplicate system prompt guidelines.
+
+    收集系统提示词准则并去重。
+    """
     names = {tool.name for tool in tools}
     guidelines: list[str] = []
     seen: set[str] = set()
 
     def add(value: str) -> None:
+        """Append one non-empty guideline unless it was already collected.
+
+        追加一条非空准则，但跳过已收集的重复项。
+        """
         normalized = value.strip()
         if not normalized or normalized in seen:
             return
@@ -259,14 +306,20 @@ def collect_prompt_guidelines(
 
 
 def format_guidelines(tools: Sequence[AgentTool], extra_guidelines: Sequence[str] = ()) -> str:
-    """Format prompt guidelines as markdown bullets."""
+    """Format prompt guidelines as markdown bullets.
+
+    将提示词准则格式化为 Markdown 项目符号列表。
+    """
     return "\n".join(
         f"- {guideline}" for guideline in collect_prompt_guidelines(tools, extra_guidelines)
     )
 
 
 def format_project_context(context_files: Sequence[ProjectContextFile]) -> str:
-    """Format project context files using Pi's XML-like wrapper."""
+    """Format project context files using Pi's XML-like wrapper.
+
+    使用 Pi 的类 XML 包装格式化项目上下文文件。
+    """
     if not context_files:
         return ""
 
@@ -288,6 +341,10 @@ def format_project_context(context_files: Sequence[ProjectContextFile]) -> str:
 def _project_context_sources(
     context_files: Sequence[ProjectContextFile],
 ) -> tuple[SystemPromptSource, ...]:
+    """Convert project context files into attributed prompt sources.
+
+    将项目上下文文件转换为带来源信息的提示词来源。
+    """
     if not context_files:
         return ()
     sources: list[SystemPromptSource] = []
@@ -313,6 +370,10 @@ def _project_context_sources(
 
 
 def _skill_sources(skills: Sequence[Skill]) -> tuple[SystemPromptSource, ...]:
+    """Convert model-visible skills into attributed prompt sources.
+
+    将模型可见技能转换为带来源信息的提示词来源。
+    """
     visible_skills = sorted(
         (skill for skill in skills if not skill.disable_model_invocation),
         key=lambda item: item.name,
@@ -355,8 +416,13 @@ def _skill_sources(skills: Sequence[Skill]) -> tuple[SystemPromptSource, ...]:
 def format_skills_for_prompt(skills: Sequence[Skill]) -> str:
     """Format skills for inclusion in a system prompt using Pi's XML style.
 
+    使用 Pi 的 XML 风格格式化技能，以便纳入系统提示词。
+
     Skills with ``disable_model_invocation`` set are excluded from the prompt;
     they remain invocable explicitly via ``/skill:<name>``.
+
+    设置了 ``disable_model_invocation`` 的技能不会出现在提示词中，但仍可通过
+    ``/skill:<name>`` 显式调用。
     """
     visible_skills = [skill for skill in skills if not skill.disable_model_invocation]
     if not visible_skills:
@@ -386,8 +452,16 @@ def format_skills_for_prompt(skills: Sequence[Skill]) -> str:
 
 
 def _has_tool(tools: Sequence[AgentTool], name: str) -> bool:
+    """Return whether the visible tool list contains the requested name.
+
+    返回可见工具列表中是否包含指定名称。
+    """
     return any(tool.name == name for tool in tools)
 
 
 def _format_path(path: Path) -> str:
+    """Render a path with forward slashes for prompt portability.
+
+    使用正斜杠渲染路径，便于提示词跨平台使用。
+    """
     return str(path).replace("\\", "/")

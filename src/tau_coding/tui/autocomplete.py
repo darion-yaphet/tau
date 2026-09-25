@@ -1,4 +1,7 @@
-"""Prompt autocomplete helpers for Tau's Textual TUI."""
+"""Prompt autocomplete helpers for Tau's Textual TUI.
+
+Tau Textual TUI 的提示输入自动补全辅助函数。
+"""
 
 from __future__ import annotations
 
@@ -32,14 +35,20 @@ MAX_FILE_COMPLETIONS = 50
 
 @dataclass(frozen=True, slots=True)
 class CompletionOption:
-    """A possible argument completion value with optional picker metadata."""
+    """A possible argument completion value with optional picker metadata.
+
+    可选的参数补全值及其选择器元数据。
+    """
 
     value: str
     description: str | None = None
 
 
 class CompletionKind(StrEnum):
-    """Source of a prompt completion and its Enter-key behavior."""
+    """Source of a prompt completion and its Enter-key behavior.
+
+    提示补全项的来源及其回车键行为。
+    """
 
     COMMAND = "command"
     PROMPT_TEMPLATE = "prompt_template"
@@ -51,7 +60,10 @@ class CompletionKind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class CompletionItem:
-    """One selectable prompt completion."""
+    """One selectable prompt completion.
+
+    一条可选择的提示补全项。
+    """
 
     display: str
     replacement: str
@@ -62,30 +74,45 @@ class CompletionItem:
     category: str | None = None
 
     def apply(self, text: str) -> str:
-        """Apply this completion to input text."""
+        """Apply this completion to input text.
+
+        将此补全项应用到输入文本中。
+        """
         return f"{text[: self.start]}{self.replacement}{text[self.end :]}"
 
     def cursor_after_apply(self) -> int:
-        """Return the cursor offset just after the applied replacement."""
+        """Return the cursor offset just after the applied replacement.
+
+        返回应用替换内容后光标所在的位置。
+        """
         return self.start + len(self.replacement)
 
 
 @dataclass(frozen=True, slots=True)
 class CompletionState:
-    """Current autocomplete state for the prompt input."""
+    """Current autocomplete state for the prompt input.
+
+    提示输入当前的自动补全状态。
+    """
 
     items: tuple[CompletionItem, ...] = ()
     selected_index: int = 0
 
     @property
     def selected(self) -> CompletionItem | None:
-        """Return the currently selected completion item."""
+        """Return the currently selected completion item.
+
+        返回当前选中的补全项。
+        """
         if not self.items:
             return None
         return self.items[self.selected_index]
 
     def select_next(self) -> CompletionState:
-        """Return a state with the next item selected."""
+        """Return a state with the next item selected.
+
+        返回选中下一项后的状态。
+        """
         if not self.items:
             return self
         return CompletionState(
@@ -94,7 +121,10 @@ class CompletionState:
         )
 
     def select_previous(self) -> CompletionState:
-        """Return a state with the previous item selected."""
+        """Return a state with the previous item selected.
+
+        返回选中上一项后的状态。
+        """
         if not self.items:
             return self
         return CompletionState(
@@ -118,7 +148,10 @@ def build_completion_state(
     session_options: Sequence[CompletionOption] = (),
     cwd: Path | None = None,
 ) -> CompletionState:
-    """Build autocomplete suggestions for the current prompt text."""
+    """Build autocomplete suggestions for the current prompt text.
+
+    根据当前提示文本构建自动补全建议。
+    """
     cursor = len(text) if cursor is None else max(0, min(cursor, len(text)))
     if not text.startswith("/") or text.startswith("//"):
         if cwd is not None:
@@ -134,6 +167,8 @@ def build_completion_state(
     if token.startswith("/skill:"):
         if has_argument_text and _matches_skill_command(token, skills):
             # Skill arguments are prompt text, so @ file references stay available.
+            #
+            # 技能参数属于提示文本，因此仍可使用 @ 文件引用。
             if cwd is not None:
                 return CompletionState(
                     _file_reference_completions(text=text, cursor=cursor, cwd=cwd)
@@ -176,6 +211,10 @@ def build_completion_state(
 
 
 def _file_reference_completions(*, text: str, cursor: int, cwd: Path) -> tuple[CompletionItem, ...]:
+    """Build matching @ file-reference completions for the active token.
+
+    为当前词元构建匹配的 @ 文件引用补全项。
+    """
     token = _active_file_reference_token(text, cursor)
     if token is None:
         return ()
@@ -218,6 +257,10 @@ def _file_reference_completions(*, text: str, cursor: int, cwd: Path) -> tuple[C
 def _external_file_reference_completions(
     *, prefix: str, existing: str, start: int, end: int, cwd: Path
 ) -> tuple[CompletionItem, ...] | None:
+    """Complete parent-directory paths that resolve outside the working tree.
+
+    补全解析到当前工作目录树之外的父目录路径。
+    """
     if prefix == ".." or prefix.endswith("/.."):
         target = cwd / prefix
         if not target.is_dir():
@@ -276,6 +319,10 @@ def _external_file_reference_completions(
 
 
 def _active_file_reference_token(text: str, cursor: int) -> tuple[int, int] | None:
+    """Find the @ reference token surrounding the current cursor position.
+
+    查找光标所在位置附近的 @ 引用词元。
+    """
     token_start = max(text.rfind(" ", 0, cursor), text.rfind("\n", 0, cursor)) + 1
     at_index = text.rfind("@", token_start, cursor)
     if at_index == -1:
@@ -287,6 +334,10 @@ def _active_file_reference_token(text: str, cursor: int) -> tuple[int, int] | No
 
 
 def _iter_file_reference_paths(cwd: Path) -> tuple[Path, ...]:
+    """Collect non-ignored paths under the working directory.
+
+    收集工作目录下未被忽略的路径。
+    """
     if not cwd.exists() or not cwd.is_dir():
         return ()
     paths: list[Path] = []
@@ -307,6 +358,10 @@ def _iter_file_reference_paths(cwd: Path) -> tuple[Path, ...]:
 
 
 def _is_ignored_file_completion_path(path: Path, *, cwd: Path) -> bool:
+    """Return whether a path lies outside the root or under an ignored directory.
+
+    判断路径是否位于根目录之外或被忽略的目录中。
+    """
     try:
         relative_parts = path.relative_to(cwd).parts
     except ValueError:
@@ -317,6 +372,10 @@ def _is_ignored_file_completion_path(path: Path, *, cwd: Path) -> bool:
 def _shell_path_completions(
     *, text: str, cursor: int, cwd: Path
 ) -> tuple[CompletionItem, ...] | None:
+    """Build filesystem completions for a shell-command path at the cursor.
+
+    为光标处 shell 命令中的文件系统路径构建补全项。
+    """
     prefix_span = _shell_command_prefix_span(text)
     if prefix_span is None:
         return None
@@ -370,6 +429,10 @@ def _shell_path_completions(
 
 
 def _shell_command_prefix_span(text: str) -> tuple[int, int] | None:
+    """Return the span of a leading shell escape marker, if present.
+
+    如果文本以 shell 转义标记开头，则返回该标记的范围。
+    """
     leading_whitespace = len(text) - len(text.lstrip())
     stripped = text[leading_whitespace:]
     if stripped.startswith("!!"):
@@ -380,6 +443,10 @@ def _shell_command_prefix_span(text: str) -> tuple[int, int] | None:
 
 
 def _active_shell_path_token(*, text: str, cursor: int, command_start: int) -> tuple[int, int]:
+    """Find the shell token around the cursor while honoring backslash escapes.
+
+    查找光标所在的 shell 词元，并正确处理反斜杠转义。
+    """
     token_start = command_start
     escaped = False
     for index in range(cursor - 1, command_start - 1, -1):
@@ -397,6 +464,10 @@ def _active_shell_path_token(*, text: str, cursor: int, command_start: int) -> t
 
 
 def _shell_token_end(text: str, cursor: int) -> int:
+    """Find the end of a shell token, skipping escaped characters.
+
+    查找 shell 词元的结束位置，并跳过转义字符。
+    """
     index = cursor
     while index < len(text):
         char = text[index]
@@ -410,6 +481,10 @@ def _shell_token_end(text: str, cursor: int) -> int:
 
 
 def _parse_shell_path_token(token: str) -> tuple[str, str, str] | None:
+    """Split a safe relative shell path into parent, prefix, and output prefix.
+
+    将安全的相对 shell 路径拆分为父目录、名称前缀和输出前缀。
+    """
     replacement_prefix = ""
     path_text = token
     if path_text.startswith("./"):
@@ -431,6 +506,10 @@ def _parse_shell_path_token(token: str) -> tuple[str, str, str] | None:
 
 
 def _matches_skill_command(token: str, skills: Sequence[Skill]) -> bool:
+    """Return whether a slash token names an available skill.
+
+    判断斜杠命令词元是否对应可用技能。
+    """
     command_name = token.removeprefix("/skill:").lower()
     return any(skill.name.lower() == command_name for skill in skills)
 
@@ -438,11 +517,19 @@ def _matches_skill_command(token: str, skills: Sequence[Skill]) -> bool:
 def _matches_prompt_template_command(
     token: str, prompt_templates: Sequence[PromptTemplate]
 ) -> bool:
+    """Return whether a slash token names an available prompt template.
+
+    判断斜杠命令词元是否对应可用提示模板。
+    """
     command_name = token.removeprefix("/").lower()
     return any(template.name.lower() == command_name for template in prompt_templates)
 
 
 def _matches_registered_command(token: str, registry: CommandRegistry) -> bool:
+    """Return whether the command registry contains this slash token.
+
+    判断命令注册表中是否包含此斜杠命令词元。
+    """
     command_name = token.removeprefix("/").lower()
     return registry.get(command_name) is not None
 
@@ -454,6 +541,10 @@ def _command_completions(
     registry: CommandRegistry,
     prompt_templates: Sequence[PromptTemplate],
 ) -> tuple[CompletionItem, ...]:
+    """Combine matching slash-command aliases and prompt-template suggestions.
+
+    合并匹配的斜杠命令别名与提示模板建议。
+    """
     prefix = token.removeprefix("/").lower()
     command_suggestions: list[CompletionItem] = []
     for command in registry.list_commands():
@@ -480,6 +571,10 @@ def _command_completions(
 
 
 def _command_completion_sort_key(item: CompletionItem, prefix: str) -> tuple[int, str]:
+    """Rank direct prefix matches before other command search matches.
+
+    将直接前缀匹配项排在其他命令搜索匹配项之前。
+    """
     if not prefix:
         return (0, item.display)
     display_name = item.display.removeprefix("/").removesuffix(":").lower()
@@ -490,6 +585,10 @@ def _command_completion_sort_key(item: CompletionItem, prefix: str) -> tuple[int
 def _command_alias_completions(
     command: SlashCommand, *, prefix: str, token_end: int
 ) -> list[CompletionItem]:
+    """Build distinct completion items from a command's names and aliases.
+
+    根据命令名称与别名构建去重后的补全项。
+    """
     names = (
         (command.name,) if not prefix else (command.name, *command.aliases, *command.search_terms)
     )
@@ -524,6 +623,10 @@ def _command_alias_completions(
 def _skill_completions(
     *, token: str, token_end: int, skills: Sequence[Skill]
 ) -> tuple[CompletionItem, ...]:
+    """Build matching completions for the available skills.
+
+    为可用技能构建匹配的补全项。
+    """
     prefix = token.removeprefix("/skill:").lower()
     suggestions = [
         CompletionItem(
@@ -551,6 +654,10 @@ def _command_argument_completions(
     session_ids: Sequence[str],
     session_options: Sequence[CompletionOption],
 ) -> tuple[CompletionItem, ...] | None:
+    """Dispatch argument completion to the option set for a known command.
+
+    将参数补全分派给已知命令对应的选项集合。
+    """
     if token_end >= len(text):
         return None
 
@@ -597,6 +704,10 @@ def _value_completions(
     options: Sequence[CompletionOption],
     sort: bool,
 ) -> tuple[CompletionItem, ...]:
+    """Filter argument options by the active token and create completion items.
+
+    按当前词元筛选参数选项并创建补全项。
+    """
     end = _argument_token_end(text, start)
     prefix = text[start:end].lower()
     ordered_options = sorted(options, key=lambda item: item.value) if sort else options
@@ -619,14 +730,26 @@ def _completion_options(
     *,
     description: str,
 ) -> tuple[CompletionOption, ...]:
+    """Wrap plain string values in completion options with shared metadata.
+
+    将普通字符串值包装为带有统一元数据的补全选项。
+    """
     return tuple(CompletionOption(value=value, description=description) for value in values)
 
 
 def _first_token_end(text: str) -> int:
+    """Return the end offset of the first space-delimited token.
+
+    返回第一个以空格分隔的词元的结束位置。
+    """
     separator = text.find(" ")
     return len(text) if separator == -1 else separator
 
 
 def _argument_token_end(text: str, start: int) -> int:
+    """Return the end offset of the argument token starting at ``start``.
+
+    返回从 ``start`` 开始的参数词元结束位置。
+    """
     separator = text.find(" ", start)
     return len(text) if separator == -1 else separator

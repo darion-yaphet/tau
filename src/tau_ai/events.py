@@ -1,4 +1,7 @@
-"""Public re-exports of the canonical assistant stream event contract."""
+"""Public re-exports of the canonical assistant stream event contract.
+
+公开重新导出规范的助手流事件协议。
+"""
 
 from tau_agent.provider_events import (
     AssistantDoneEvent,

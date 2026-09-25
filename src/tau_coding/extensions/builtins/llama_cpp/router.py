@@ -1,8 +1,13 @@
 """Pinned llama.cpp router protocol adapter.
 
+固定版本的 llama.cpp 路由器协议适配器。
+
 The mutating API is used only after ``/props`` proves both router identity and
 a tested build. Unknown builds intentionally fall back to OpenAI-compatible
 model discovery in the owning service.
+
+只有在 ``/props`` 同时证明路由器身份和经过测试的构建后，才会使用变更 API。未知构建
+会有意回退到所属服务中的 OpenAI 兼容模型发现。
 """
 
 from __future__ import annotations
@@ -25,22 +30,37 @@ RouterState = Literal[
 
 
 class LlamaCppRouterError(RuntimeError):
-    """A malformed or failed request to a confirmed compatible router."""
+    """A malformed or failed request to a confirmed compatible router.
+
+    向已确认兼容路由器发出的格式错误或失败请求。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class RouterCapability:
+    """Detected router identity and compatibility information.
+
+    检测到的路由器身份与兼容性信息。
+    """
     role: Literal["standard", "compatible", "incompatible"]
     build: int | None = None
     diagnostic: str | None = None
 
     @property
     def compatible(self) -> bool:
+        """Return whether the detected router build is supported.
+
+        返回检测到的路由器构建是否受支持。
+        """
         return self.role == "compatible"
 
 
 @dataclass(frozen=True, slots=True)
 class RouterModel:
+    """One model reported by the llama.cpp router.
+
+    llama.cpp 路由器报告的一个模型。
+    """
     id: str
     state: RouterState
     display_name: str | None = None
@@ -55,7 +75,10 @@ async def detect_router(
     server_root: str,
     headers: Mapping[str, str],
 ) -> RouterCapability:
-    """Identify only the documented router and gate it to the tested builds."""
+    """Identify only the documented router and gate it to the tested builds.
+
+    仅识别有文档说明的路由器，并限制到经过测试的构建。
+    """
     response = await client.get(server_root + "/props", headers=dict(headers))
     if response.status_code == 404:
         return RouterCapability("standard")
@@ -196,7 +219,10 @@ async def watch_router_download_progress(
     model_id: str,
     callback: Callable[[int, int], None],
 ) -> None:
-    """Forward bounded aggregate download progress from the router SSE stream."""
+    """Forward bounded aggregate download progress from the router SSE stream.
+
+    从路由器 SSE 流转发有界的汇总下载进度。
+    """
     async with client.stream(
         "GET",
         server_root + "/models/sse",
@@ -284,7 +310,10 @@ def _raise_http(response: httpx.Response, operation: str) -> None:
 
 
 def _server_error_detail(response: httpx.Response) -> str | None:
-    """Extract one bounded, user-actionable message from a router error."""
+    """Extract one bounded, user-actionable message from a router error.
+
+    从路由器错误中提取一条有界且用户可操作的消息。
+    """
     try:
         payload = response.json()
     except ValueError:

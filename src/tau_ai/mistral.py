@@ -1,4 +1,7 @@
-"""Mistral Conversations provider."""
+"""Mistral Conversations provider.
+
+Mistral Conversations 提供方。
+"""
 
 from __future__ import annotations
 
@@ -45,8 +48,14 @@ from tau_ai.tool_call_ids import portable_tool_call_id
 
 
 class MistralConversationsProvider:
-    """Provider adapter for Mistral's streaming chat API."""
+    """Provider adapter for Mistral's streaming chat API.
 
+    Mistral 流式聊天 API 的提供方适配器。
+    """
+
+    # Initialize the provider configuration and optional HTTP client.
+    #
+    # 初始化提供方配置和可选的 HTTP 客户端。
     def __init__(
         self,
         config: OpenAICompatibleConfig,
@@ -58,7 +67,10 @@ class MistralConversationsProvider:
         self._owns_client = client is None
 
     async def aclose(self) -> None:
-        """Close the underlying HTTP client if this provider created it."""
+        """Close the underlying HTTP client if this provider created it.
+
+        如果底层 HTTP 客户端由当前提供方创建，则将其关闭。
+        """
         if self._client is not None and self._owns_client:
             await self._client.aclose()
             self._client = None
@@ -73,7 +85,10 @@ class MistralConversationsProvider:
         signal: CancellationToken | None = None,
         session_id: str | None = None,
     ) -> AsyncIterator[AssistantMessageEvent]:
-        """Stream one response as Pi-compatible assistant message events."""
+        """Stream one response as Pi-compatible assistant message events.
+
+        将一次响应以兼容 Pi 的助手消息事件形式进行流式传输。
+        """
         del session_id
         raw = self._stream_provider_events(
             model=model, system=system, messages=messages, tools=tools, signal=signal
@@ -91,7 +106,10 @@ class MistralConversationsProvider:
         tools: list[AgentTool],
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
-        """Stream one Mistral response as provider-neutral events."""
+        """Stream one Mistral response as provider-neutral events.
+
+        将一次 Mistral 响应转换为与提供方无关的事件流。
+        """
         payload = _build_mistral_payload(
             model=model,
             system=system,
@@ -116,7 +134,13 @@ class MistralConversationsProvider:
         payload: Mapping[str, JSONValue],
         signal: CancellationToken | None,
     ) -> AsyncIterator[ProviderEvent]:
+        # Run the retrying HTTP stream and translate parsed chunks into provider events.
+        #
+        # 执行带重试的 HTTP 流，并将解析后的数据块转换为提供方事件。
         async def iterator() -> AsyncIterator[ProviderEvent]:
+            # Prepare the client and authentication headers before opening the stream.
+            #
+            # 在打开流之前准备客户端和身份验证请求头。
             client = self._get_client()
             headers = {
                 **dict(self._config.headers or {}),
@@ -124,6 +148,9 @@ class MistralConversationsProvider:
             }
             attempt = 0
             while True:
+                # Create a fresh parser for each attempt so retries do not reuse partial state.
+                #
+                # 每次尝试都创建新的解析器，避免重试复用不完整状态。
                 parser = _MistralStreamParser()
                 try:
                     async with client.stream(
@@ -160,6 +187,9 @@ class MistralConversationsProvider:
                             return
 
                         yield ProviderResponseStartEvent(model=model)
+                        # Parse each SSE line and forward its incremental events.
+                        #
+                        # 解析每一行 SSE，并转发其中的增量事件。
                         async for line in response.aiter_lines():
                             if signal is not None and signal.is_cancelled():
                                 return
@@ -196,11 +226,17 @@ class MistralConversationsProvider:
 
         return iterator()
 
+    # Return the configured HTTP client, creating the owned client lazily.
+    #
+    # 返回已配置的 HTTP 客户端，并按需延迟创建自有客户端。
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
             self._client = create_async_client(timeout=self._config.timeout_seconds)
         return self._client
 
+    # Decide whether another request attempt is allowed for the current failure.
+    #
+    # 判断当前失败是否允许再次尝试请求。
     def _should_retry(self, attempt: int, *, status_code: int | None = None) -> bool:
         if attempt >= self._config.max_retries:
             return False
@@ -210,12 +246,21 @@ class MistralConversationsProvider:
 class _StreamParser(Protocol):
     emitted_content: bool
 
+    # Consume one SSE payload and report emitted events and stream completion.
+    #
+    # 消费一个 SSE 载荷，并返回生成的事件及流是否完成。
     def feed(self, event: str) -> tuple[list[ProviderEvent], bool]: ...
 
+    # Finish parsing and emit the terminal provider events.
+    #
+    # 完成解析并生成终止提供方事件。
     def finalize(self) -> list[ProviderEvent]: ...
 
 
 class _MistralStreamParser:
+    # Initialize accumulators for text, reasoning, tool calls, and finish state.
+    #
+    # 初始化文本、推理、工具调用和结束状态的累积器。
     def __init__(self) -> None:
         self.emitted_content = False
         self._content_parts: list[str] = []
@@ -223,6 +268,9 @@ class _MistralStreamParser:
         self._tool_call_builders: dict[int, _ToolCallBuilder] = {}
         self._finish_reason: str | None = None
 
+    # Parse one Mistral SSE payload into incremental provider events.
+    #
+    # 将一个 Mistral SSE 载荷解析为增量提供方事件。
     def feed(self, event: str) -> tuple[list[ProviderEvent], bool]:
         if event == "[DONE]":
             return [], True
@@ -254,6 +302,9 @@ class _MistralStreamParser:
             builder.add_delta(tool_call_delta)
         return events, False
 
+    # Assemble accumulated content into tool-call and response-end events.
+    #
+    # 将累积内容组装为工具调用事件和响应结束事件。
     def finalize(self) -> list[ProviderEvent]:
         tool_calls = [
             builder.build(index) for index, builder in sorted(self._tool_call_builders.items())
@@ -274,11 +325,17 @@ class _MistralStreamParser:
 
 
 class _ToolCallBuilder:
+    # Initialize fragmented tool-call fields collected from stream deltas.
+    #
+    # 初始化从流式增量中收集的工具调用分段字段。
     def __init__(self) -> None:
         self.id = ""
         self.name = ""
         self.arguments_parts: list[str] = []
 
+    # Merge one tool-call delta into the accumulated call state.
+    #
+    # 将一个工具调用增量合并到累积的调用状态中。
     def add_delta(self, delta: Mapping[str, Any]) -> None:
         call_id = delta.get("id")
         if isinstance(call_id, str) and call_id != "null":
@@ -295,6 +352,9 @@ class _ToolCallBuilder:
         elif isinstance(arguments, Mapping):
             self.arguments_parts.append(dumps(arguments))
 
+    # Build a complete tool call from the accumulated stream fragments.
+    #
+    # 根据累积的流式片段构建完整工具调用。
     def build(self, index: int) -> ToolCall:
         arguments_text = "".join(self.arguments_parts)
         arguments = _loads_object(arguments_text) if arguments_text else {}
@@ -307,6 +367,9 @@ class _ToolCallBuilder:
         )
 
 
+# Build the Mistral request payload from model settings, messages, and tools.
+#
+# 根据模型设置、消息和工具构建 Mistral 请求载荷。
 def _build_mistral_payload(
     *,
     model: str,
@@ -337,10 +400,16 @@ def _build_mistral_payload(
     return payload
 
 
+# Convert an optional system prompt into Mistral message form.
+#
+# 将可选的系统提示词转换为 Mistral 消息格式。
 def _system_messages(system: str) -> list[dict[str, JSONValue]]:
     return [{"role": "system", "content": system}] if system else []
 
 
+# Convert agent messages to Mistral messages while preserving supported images.
+#
+# 将代理消息转换为 Mistral 消息，同时保留受支持的图片。
 def _messages_to_mistral(
     messages: list[AgentMessage], *, supports_images: bool
 ) -> list[dict[str, JSONValue]]:
@@ -393,6 +462,9 @@ def _messages_to_mistral(
     return converted
 
 
+# Wrap tool-result images in a Mistral user message.
+#
+# 将工具结果图片封装为 Mistral 用户消息。
 def _mistral_tool_image_message(images: list[ImageContent]) -> dict[str, JSONValue]:
     content: list[JSONValue] = [{"type": "text", "text": "Attached image(s) from tool result:"}]
     content.extend(
@@ -405,6 +477,9 @@ def _mistral_tool_image_message(images: list[ImageContent]) -> dict[str, JSONVal
     return {"role": "user", "content": content}
 
 
+# Convert one agent message into Mistral's chat message shape.
+#
+# 将一条代理消息转换为 Mistral 聊天消息结构。
 def _message_to_mistral(message: AgentMessage) -> dict[str, JSONValue]:
     if isinstance(message, UserMessage):
         return {"role": "user", "content": message.text}
@@ -427,6 +502,9 @@ def _message_to_mistral(message: AgentMessage) -> dict[str, JSONValue]:
     return _message_to_mistral(message_to_user(message))
 
 
+# Convert an agent tool definition into Mistral's function-tool schema.
+#
+# 将代理工具定义转换为 Mistral 的函数工具模式。
 def _tool_to_mistral(tool: AgentTool) -> dict[str, JSONValue]:
     return {
         "type": "function",
@@ -439,6 +517,9 @@ def _tool_to_mistral(tool: AgentTool) -> dict[str, JSONValue]:
     }
 
 
+# Convert a tool call into Mistral's serialized function-call shape.
+#
+# 将工具调用转换为 Mistral 的序列化函数调用结构。
 def _tool_call_to_mistral(tool_call: ToolCall) -> dict[str, JSONValue]:
     return {
         "id": portable_tool_call_id(tool_call.id),
@@ -447,6 +528,9 @@ def _tool_call_to_mistral(tool_call: ToolCall) -> dict[str, JSONValue]:
     }
 
 
+# Normalize a Mistral base URL so it ends with the API version path.
+#
+# 规范化 Mistral 基础 URL，使其以 API 版本路径结尾。
 def _mistral_base_url(base_url: str) -> str:
     normalized = base_url.rstrip("/")
     if normalized.endswith("/v1"):
@@ -454,10 +538,16 @@ def _mistral_base_url(base_url: str) -> str:
     return f"{normalized}/v1"
 
 
+# Return whether the model accepts the reasoning_effort request field.
+#
+# 返回该模型是否接受 reasoning_effort 请求字段。
 def _uses_reasoning_effort(model: str) -> bool:
     return model in {"mistral-small-2603", "mistral-small-latest", "mistral-medium-3.5"}
 
 
+# Extract the data payload from one server-sent event line.
+#
+# 从一行服务器发送事件中提取 data 载荷。
 def _parse_sse_line(line: str) -> str | None:
     line = line.strip()
     if not line or not line.startswith("data:"):
@@ -465,6 +555,9 @@ def _parse_sse_line(line: str) -> str | None:
     return line.removeprefix("data:").strip()
 
 
+# Decode a JSON string only when its top-level value is an object.
+#
+# 仅当 JSON 字符串的顶层值为对象时才返回解码结果。
 def _loads_object(value: str) -> dict[str, JSONValue] | None:
     try:
         loaded = loads(value)
@@ -473,6 +566,9 @@ def _loads_object(value: str) -> dict[str, JSONValue] | None:
     return loaded if isinstance(loaded, dict) else None
 
 
+# Return the first valid completion choice from a response chunk.
+#
+# 从响应数据块中返回第一个有效的补全选项。
 def _first_choice(chunk: Mapping[str, Any]) -> Mapping[str, Any] | None:
     choices = chunk.get("choices")
     if not isinstance(choices, list) or not choices:
@@ -481,6 +577,9 @@ def _first_choice(chunk: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return choice if isinstance(choice, Mapping) else None
 
 
+# Extract visible text fragments from a Mistral content delta.
+#
+# 从 Mistral 内容增量中提取可见文本片段。
 def _content_deltas(delta: Mapping[str, Any]) -> list[str]:
     content = delta.get("content")
     if isinstance(content, str) and content:
@@ -498,6 +597,9 @@ def _content_deltas(delta: Mapping[str, Any]) -> list[str]:
     return output
 
 
+# Extract reasoning text fragments from a Mistral content delta.
+#
+# 从 Mistral 内容增量中提取推理文本片段。
 def _thinking_deltas(delta: Mapping[str, Any]) -> list[str]:
     content = delta.get("content")
     if not isinstance(content, list):
@@ -518,6 +620,9 @@ def _thinking_deltas(delta: Mapping[str, Any]) -> list[str]:
     return output
 
 
+# Extract valid tool-call fragments from a Mistral delta.
+#
+# 从 Mistral 增量中提取有效的工具调用片段。
 def _tool_call_deltas(delta: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     tool_calls = delta.get("tool_calls") or delta.get("toolCalls")
     if not isinstance(tool_calls, list):

@@ -1,4 +1,7 @@
-"""Build-time models.dev catalog generation for Tau's bundled providers."""
+"""Build-time models.dev catalog generation for Tau's bundled providers.
+
+为 Tau 内置提供商生成构建时 models.dev 目录。
+"""
 
 from __future__ import annotations
 
@@ -35,6 +38,7 @@ NVIDIA_UNSUPPORTED_MODELS = {
 }
 
 # Tau names providers for users; models.dev names them for its own catalog.
+# Tau 面向用户命名提供商；models.dev 则为自身目录命名它们。
 _MODELS_DEV_PROVIDER_KEYS = {
     "kimi-code": "kimi-for-coding",
     "together": "togetherai",
@@ -42,7 +46,10 @@ _MODELS_DEV_PROVIDER_KEYS = {
 
 
 def nvidia_model_filter(source: object, live_source: object) -> set[str]:
-    """Return models.dev NVIDIA IDs accepted by Pi's live NIM filter."""
+    """Return models.dev NVIDIA IDs accepted by Pi's live NIM filter.
+
+    返回 Pi 实时 NIM 过滤器接受的 models.dev NVIDIA ID。
+    """
     if not isinstance(source, dict) or not isinstance(live_source, dict):
         raise ValueError("NVIDIA filtering sources must be JSON objects")
     provider = source.get("nvidia")
@@ -66,7 +73,10 @@ def nvidia_model_filter(source: object, live_source: object) -> set[str]:
 def thinking_level_map_from_reasoning_options(
     reasoning_options: object,
 ) -> dict[ThinkingLevel, str | None] | None:
-    """Convert verified models.dev effort values using Pi's exact semantics."""
+    """Convert verified models.dev effort values using Pi's exact semantics.
+
+    使用 Pi 的精确语义转换已校验的 models.dev effort 值。
+    """
     if not isinstance(reasoning_options, list):
         return None
 
@@ -80,6 +90,8 @@ def thinking_level_map_from_reasoning_options(
 
     # Pi emits no map when models.dev has no usable effort values. Toggle-only
     # and empty option arrays therefore retain provider/manual behavior.
+    # 当 models.dev 没有可用的 effort 值时，Pi 不会生成映射。因此，仅切换和空选项
+    # 数组会保留提供商或手动行为。
     selectable = set(THINKING_LEVELS) - {"off"}
     if not values or not (selectable.intersection(values) or "none" in values):
         return None
@@ -101,10 +113,16 @@ def models_dev_catalog_document(
 ) -> dict[str, Any]:
     """Generate complete model inventories and metadata for Tau providers.
 
+    为 Tau 提供商生成完整的模型清单和元数据。
+
     Like Pi, models.dev supplies the model rows while provider transport/auth
     configuration remains application-owned. Existing catalog-only rows are
     retained as explicit Tau corrections; source rows that are deprecated or do
     not advertise tool calling are removed unless they are the provider default.
+
+    与 Pi 一样，models.dev 提供模型行，而提供商传输和认证配置仍由应用拥有。
+    仅在目录中的现有行会作为 Tau 的显式修正保留；已弃用或未声明工具调用的源行会被
+    移除，除非它们是提供商默认模型。
     """
     if not isinstance(source, Mapping):
         raise ValueError("models.dev data must be a JSON object")
@@ -158,7 +176,10 @@ def models_dev_catalog_document(
 
 
 def bundled_models_dev_catalog_document() -> dict[str, Any] | None:
-    """Load and validate generated model data, or fall back silently."""
+    """Load and validate generated model data, or fall back silently.
+
+    加载并校验生成的模型数据，失败时静默回退。
+    """
     try:
         text = files("tau_coding").joinpath(MODELS_DEV_CATALOG_RESOURCE).read_text(encoding="utf-8")
         document = json.loads(text)
@@ -169,12 +190,19 @@ def bundled_models_dev_catalog_document() -> dict[str, Any] | None:
 
 
 def bundled_models_dev_catalog_overlay() -> dict[str, Any] | None:
+    """Return bundled generated model data as a validated catalog overlay.
+
+    将内置生成模型数据作为已校验的目录覆盖返回。
+    """
     document = bundled_models_dev_catalog_document()
     return models_dev_catalog_overlay(document) if document is not None else None
 
 
 def models_dev_catalog_overlay(document: object) -> dict[str, Any]:
-    """Validate a generated document and return raw partial provider tables."""
+    """Validate a generated document and return raw partial provider tables.
+
+    校验生成的文档并返回原始的部分提供商表。
+    """
     if not isinstance(document, Mapping) or document.get("schema_version") != 1:
         raise ValueError("models.dev catalog has an unsupported schema")
     providers = document.get("providers")
@@ -210,6 +238,10 @@ def models_dev_catalog_overlay(document: object) -> dict[str, Any]:
 
 
 def _is_eligible_model(model: Mapping[object, object]) -> bool:
+    """Return whether a source model supports Tau's required capabilities.
+
+    返回源模型是否支持 Tau 所需能力。
+    """
     if model.get("tool_call") is not True or model.get("status") == "deprecated":
         return False
     modalities = model.get("modalities")
@@ -230,6 +262,10 @@ def _model_metadata(
     model: Mapping[object, object],
     provider: ProviderCatalogEntry,
 ) -> dict[str, Any]:
+    """Convert one models.dev row into Tau catalog metadata.
+
+    将一条 models.dev 记录转换为 Tau 目录元数据。
+    """
     modalities = model.get("modalities")
     inputs = modalities.get("input") if isinstance(modalities, Mapping) else None
     cost = model.get("cost")
@@ -271,6 +307,10 @@ def _model_metadata(
 
 
 def _cost_rates(value: object) -> dict[str, float]:
+    """Normalize a models.dev cost object into Tau rate fields.
+
+    将 models.dev 成本对象规范化为 Tau 费率字段。
+    """
     cost = value if isinstance(value, Mapping) else {}
     return {
         "input": _number_or_zero(cost.get("input")),
@@ -281,6 +321,10 @@ def _cost_rates(value: object) -> dict[str, float]:
 
 
 def _cost_tiers(value: object) -> list[dict[str, Any]]:
+    """Convert context-dependent source pricing into ordered cost tiers.
+
+    将依赖上下文的源定价转换为有序成本层级。
+    """
     if not isinstance(value, Mapping):
         return []
     raw_tiers = value.get("tiers")
@@ -314,14 +358,26 @@ def _cost_tiers(value: object) -> list[dict[str, Any]]:
 
 
 def _string_or(value: object, fallback: str) -> str:
+    """Return a non-empty string or its fallback.
+
+    返回非空字符串，否则返回回退值。
+    """
     return value if isinstance(value, str) and value else fallback
 
 
 def _number_or_zero(value: object) -> float:
+    """Return a numeric value as float, or zero for invalid input.
+
+    将数值作为浮点数返回，无效输入则返回零。
+    """
     return float(value) if isinstance(value, int | float) and not isinstance(value, bool) else 0.0
 
 
 def _positive_int_or(value: object, fallback: int) -> int:
+    """Return a positive integer or its fallback.
+
+    返回正整数，否则返回回退值。
+    """
     return (
         value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else fallback
     )

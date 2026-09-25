@@ -1,4 +1,7 @@
-"""Best-effort PyPI update checks for the Tau CLI."""
+"""Best-effort PyPI update checks for the Tau CLI.
+
+Tau CLI 的尽力而为 PyPI 更新检查。
+"""
 
 from __future__ import annotations
 
@@ -29,7 +32,10 @@ Clock = Callable[[], datetime]
 
 @dataclass(frozen=True, slots=True)
 class UpdateNotice:
-    """A user-facing update notice."""
+    """A user-facing update notice.
+
+    面向用户的更新通知。
+    """
 
     current_version: str
     latest_version: str
@@ -37,7 +43,10 @@ class UpdateNotice:
 
     @property
     def message(self) -> str:
-        """Return concise update guidance."""
+        """Return concise update guidance.
+
+        返回简洁的更新指引。
+        """
         return (
             f"Tau {self.latest_version} is available (installed: {self.current_version}). "
             "Run `tau update` to upgrade."
@@ -46,7 +55,10 @@ class UpdateNotice:
 
 @dataclass(frozen=True, slots=True)
 class UpdateCheckResult:
-    """Cached latest-version lookup result."""
+    """Cached latest-version lookup result.
+
+    已缓存的最新版本查询结果。
+    """
 
     checked_at: datetime
     latest_version: str | None
@@ -54,7 +66,10 @@ class UpdateCheckResult:
 
 @dataclass(frozen=True, slots=True)
 class ReleaseNoteSection:
-    """A named release-note section."""
+    """A named release-note section.
+
+    命名的发布说明章节。
+    """
 
     title: str
     items: tuple[str, ...]
@@ -62,7 +77,10 @@ class ReleaseNoteSection:
 
 @dataclass(frozen=True, slots=True)
 class ReleaseNotesEntry:
-    """Structured release notes for one Tau version."""
+    """Structured release notes for one Tau version.
+
+    单个 Tau 版本的结构化发布说明。
+    """
 
     version: str
     date: str | None
@@ -70,13 +88,19 @@ class ReleaseNotesEntry:
 
     @property
     def transcript_items(self) -> tuple[str, ...]:
-        """Return flattened note text for compact in-app display."""
+        """Return flattened note text for compact in-app display.
+
+        返回扁平化说明文本，用于应用内紧凑显示。
+        """
         return tuple(item for section in self.sections for item in section.items)
 
 
 @dataclass(frozen=True, slots=True)
 class ReleaseNotesNotice:
-    """Release notes shown once after the installed Tau version changes."""
+    """Release notes shown once after the installed Tau version changes.
+
+    已安装 Tau 版本变化后仅显示一次的发布说明。
+    """
 
     current_version: str
     previous_version: str
@@ -84,12 +108,18 @@ class ReleaseNotesNotice:
 
     @property
     def notes(self) -> tuple[str, ...]:
-        """Return all release note items included in this notice."""
+        """Return all release note items included in this notice.
+
+        返回此通知中包含的所有发布说明条目。
+        """
         return tuple(item for entry in self.entries for item in entry.transcript_items)
 
     @property
     def message(self) -> str:
-        """Return a compact markdown release-notes block for the transcript."""
+        """Return a compact markdown release-notes block for the transcript.
+
+        返回用于记录的紧凑 Markdown 发布说明块。
+        """
         if self.entries:
             version_blocks = [self._format_entry(entry) for entry in self.entries]
             body = "\n\n".join(version_blocks)
@@ -191,7 +221,10 @@ def startup_release_notes_notice(
 
 
 def load_release_notes(path: Path | None = None) -> tuple[ReleaseNotesEntry, ...]:
-    """Load structured release notes from the repo-owned JSON file."""
+    """Load structured release notes from the repo-owned JSON file.
+
+    从仓库拥有的 JSON 文件加载结构化发布说明。
+    """
     data = json.loads((path or RELEASE_NOTES_PATH).read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError("release notes must be a JSON array")
@@ -203,7 +236,10 @@ def release_notes_between(
     current_version: str,
     release_notes: tuple[ReleaseNotesEntry, ...],
 ) -> tuple[ReleaseNotesEntry, ...]:
-    """Return release-note entries newer than previous_version up to current_version."""
+    """Return release-note entries newer than previous_version up to current_version.
+
+    返回比 previous_version 新且不超过 current_version 的发布说明条目。
+    """
     try:
         previous = Version(previous_version)
         current = Version(current_version)
@@ -222,7 +258,10 @@ def release_notes_between(
 
 
 def fetch_latest_pypi_version(*, fetcher: Fetcher | None = None) -> str | None:
-    """Fetch the latest stable Tau version from PyPI."""
+    """Fetch the latest stable Tau version from PyPI.
+
+    从 PyPI 获取最新稳定 Tau 版本。
+    """
     data = (fetcher or _httpx_fetch_json)(PYPI_JSON_URL, UPDATE_CHECK_TIMEOUT_SECONDS)
     releases = data.get("releases")
     if isinstance(releases, dict):
@@ -241,12 +280,18 @@ def fetch_latest_pypi_version(*, fetcher: Fetcher | None = None) -> str | None:
 
 
 def default_update_check_cache_path(paths: TauPaths | None = None) -> Path:
-    """Return the on-disk cache path for startup update checks."""
+    """Return the on-disk cache path for startup update checks.
+
+    返回启动更新检查的磁盘缓存路径。
+    """
     return (paths or TauPaths()).home / "cache" / "update-check.json"
 
 
 def default_release_notes_state_path(paths: TauPaths | None = None) -> Path:
-    """Return the on-disk state path for one-time release notes."""
+    """Return the on-disk state path for one-time release notes.
+
+    返回一次性发布说明的磁盘状态路径。
+    """
     return (paths or TauPaths()).home / "cache" / RELEASE_NOTES_STATE_FILENAME
 
 

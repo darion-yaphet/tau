@@ -1,4 +1,7 @@
-"""Display state for Tau's Textual TUI."""
+"""Display state for Tau's Textual TUI.
+
+Tau Textual TUI 的显示状态。
+"""
 
 from __future__ import annotations
 
@@ -33,6 +36,7 @@ TOOL_RESULT_PREVIEW_CHARS = 2_000
 TERMINAL_COMMAND_OUTPUT_PREVIEW_LINES = 120
 # Show live elapsed time on an executing tool row once it stops being instant;
 # quick reads/edits never flash a "(0s)".
+# 当执行中的工具行不再是瞬时操作时显示实时耗时；快速读取或编辑不会闪现“(0s)”。
 TOOL_TIMER_MIN_SECONDS = 1.0
 BATCHABLE_TOOL_NAMES = frozenset({"bash", "edit", "read", "write"})
 GROUPABLE_FILE_TOOL_NAMES = frozenset({"edit", "read", "write"})
@@ -41,7 +45,10 @@ RESULTFUL_FILE_GROUP_NAMES = frozenset({"edit", "write"})
 
 @dataclass(slots=True)
 class GroupedToolCall:
-    """One underlying call represented by a grouped transcript row."""
+    """One underlying call represented by a grouped transcript row.
+
+    分组记录行所表示的一个底层调用。
+    """
 
     tool_call_id: str
     tool_name: str
@@ -55,7 +62,10 @@ class GroupedToolCall:
 
 @dataclass(slots=True)
 class ChatItem:
-    """One rendered item in the TUI transcript."""
+    """One rendered item in the TUI transcript.
+
+    TUI 记录中的一个已渲染项目。
+    """
 
     role: ChatItemRole
     text: str
@@ -63,6 +73,8 @@ class ChatItem:
     tool_result_text: str | None = None
     # The raw result object, kept alongside the formatted text so the tool's
     # `render_result` (resolved lazily, like `render_call`) can format it.
+    # 原始结果对象与格式化文本一同保留，以便工具的 `render_result`（像 `render_call`
+    # 一样延迟解析）能够格式化它。
     tool_result: AgentToolResult | None = None
     update_text: str | None = None
     tool_name: str | None = None
@@ -82,7 +94,10 @@ class ChatItem:
 
 @dataclass(slots=True)
 class TuiState:
-    """Mutable display state for the interactive TUI."""
+    """Mutable display state for the interactive TUI.
+
+    交互式 TUI 的可变显示状态。
+    """
 
     items: list[ChatItem] = field(default_factory=list)
     assistant_buffer: str = ""
@@ -130,7 +145,10 @@ class TuiState:
         system_prompt_sources: tuple[SystemPromptSource, ...] | None = None,
         highlight: Literal["alert", "update"] | None = None,
     ) -> None:
-        """Append a transcript item."""
+        """Append a transcript item.
+
+        追加一个记录项目。
+        """
         item = ChatItem(
             role=role,
             text=text,
@@ -150,9 +168,14 @@ class TuiState:
     def resolve_custom_markup(self, item: ChatItem, *, expanded: bool) -> str | None:
         """Render a custom item's markup via the installed resolver, or ``None``.
 
+        通过已安装的解析器渲染自定义项目标记，否则返回 ``None``。
+
         Returns ``None`` when the item is not custom, no resolver is installed,
         or the resolver declines/fails to render (the caller then falls back to
         the raw ``item.text``).
+
+        当项目不是自定义项目、未安装解析器，或解析器拒绝或无法渲染时返回 ``None``；
+        调用方随后回退到原始 ``item.text``。
         """
         if item.role != "custom" or item.custom_type is None or self.custom_renderer is None:
             return None
@@ -161,11 +184,17 @@ class TuiState:
     def resolve_tool_invocation(self, item: ChatItem, *, expanded: bool = False) -> str | None:
         """Render a tool item's invocation via the installed resolver, or ``None``.
 
+        通过已安装的解析器渲染工具项目调用，否则返回 ``None``。
+
         Resolved lazily at render time (like custom markup) so tool calls
         restored before the extension runtime connects still pick up their
         tool's `render_call` on the next redraw. Expanded built-in bash calls
         recover the exact command from their retained arguments. ``None`` means
         "no renderer" and the caller falls back to the generic ``item.text``.
+
+        在渲染时延迟解析，使扩展运行时连接前恢复的工具调用也能在下次重绘时使用工具的
+        `render_call`。展开的内置 Bash 调用会从保留参数恢复精确命令。``None`` 表示
+        “无渲染器”，调用方会回退到通用 ``item.text``。
         """
         if item.role != "tool":
             return None
@@ -215,10 +244,15 @@ class TuiState:
     def resolve_tool_result(self, item: ChatItem, *, expanded: bool) -> str | None:
         """Render a tool item's result via its tool's `render_result`, or ``None``.
 
+        通过工具自身的 `render_result` 渲染工具项目结果，否则返回 ``None``。
+
         Resolved lazily at render time (like `resolve_tool_invocation`) so
         results restored before the extension runtime connects still pick up
         their tool's `render_result` on the next redraw. ``None`` means "no
         renderer" and the caller falls back to the generic result block.
+
+        在渲染时延迟解析，使扩展运行时连接前恢复的结果也能在下次重绘时使用工具的
+        `render_result`。``None`` 表示“无渲染器”，调用方会回退到通用结果块。
         """
         if (
             item.role != "tool"
@@ -233,7 +267,10 @@ class TuiState:
         return self.tool_result_renderer(item.tool_name, item.tool_result, expanded)
 
     def new_tool_batch_id(self) -> int:
-        """Return a presentation-only id for calls from one assistant message."""
+        """Return a presentation-only id for calls from one assistant message.
+
+        为来自同一助手消息的调用返回仅用于展示的 ID。
+        """
         self._next_tool_batch_id += 1
         return self._next_tool_batch_id
 
@@ -244,7 +281,10 @@ class TuiState:
         batch_id: int | None = None,
         allows_file_mutation_continuation: bool = False,
     ) -> ChatItem:
-        """Append a tool call, batching adjacent calls for compact presentation."""
+        """Append a tool call, batching adjacent calls for compact presentation.
+
+        追加工具调用，并批处理相邻调用以实现紧凑展示。
+        """
         skill_name = self._read_skill_name(tool_call)
         if skill_name is not None:
             self.add_item(
@@ -282,6 +322,10 @@ class TuiState:
         batch_id: int | None,
         allows_file_mutation_continuation: bool = False,
     ) -> ChatItem:
+        """Create one transcript item for a newly observed tool call.
+
+        为新观察到的工具调用创建一个记录项目。
+        """
         return ChatItem(
             role="tool",
             text=format_tool_call_block(tool_call),
@@ -300,7 +344,10 @@ class TuiState:
         batch_id: int | None,
         allowed: bool,
     ) -> bool:
-        """Group completed edit/write-only continuations across response boundaries."""
+        """Group completed edit/write-only continuations across response boundaries.
+
+        跨响应边界合并已完成的 edit/write-only 连续操作。
+        """
         if (
             not allowed
             or batch_id is None
@@ -325,6 +372,10 @@ class TuiState:
         )
 
     def _can_append_tool_batch(self, tool_call: ToolCall, *, batch_id: int | None) -> bool:
+        """Return whether a call can join the current compact tool batch.
+
+        返回调用是否可加入当前紧凑工具批次。
+        """
         if batch_id is None or not self.items or tool_call.name not in BATCHABLE_TOOL_NAMES:
             return False
         previous = self.items[-1]
@@ -347,11 +398,19 @@ class TuiState:
         tool_name: str | None,
         arguments: dict[str, JSONValue],
     ) -> bool:
+        """Return whether a tool call has extension-defined invocation rendering.
+
+        返回工具调用是否具有扩展定义的调用渲染。
+        """
         if tool_name is None or self.tool_call_renderer is None:
             return False
         return self.tool_call_renderer(tool_name, arguments) is not None
 
     def _append_batched_tool_call(self, item: ChatItem, tool_call: ToolCall) -> None:
+        """Append a compatible tool call to an existing batched row.
+
+        将兼容工具调用追加到现有批处理行。
+        """
         if (
             item.tool_batch_items is None
             and item.tool_name in GROUPABLE_FILE_TOOL_NAMES
@@ -391,11 +450,19 @@ class TuiState:
         self._refresh_tool_batch(item)
 
     def _tool_call_ids(self, item: ChatItem) -> list[str]:
+        """Return every underlying tool-call ID represented by an item.
+
+        返回项目表示的所有底层工具调用 ID。
+        """
         if item.grouped_tool_calls is not None:
             return [member.tool_call_id for member in item.grouped_tool_calls]
         return [item.tool_call_id] if item.tool_call_id is not None else []
 
     def _append_grouped_file_call(self, item: ChatItem, tool_call: ToolCall) -> None:
+        """Append one file operation to a grouped file-operation row.
+
+        将一个文件操作追加到分组文件操作行。
+        """
         if item.grouped_tool_calls is None:
             first = GroupedToolCall(
                 tool_call_id=item.tool_call_id or "display-call",
@@ -428,6 +495,10 @@ class TuiState:
         self._refresh_tool_group(item)
 
     def _refresh_tool_batch(self, item: ChatItem) -> None:
+        """Rebuild display text and status for a batched tool row.
+
+        重建批处理工具行的显示文本和状态。
+        """
         rows = item.tool_batch_items or []
         item.text = "\n".join(row.text for row in rows)
         pending = [row for row in rows if row.started_at is not None]
@@ -446,6 +517,10 @@ class TuiState:
         item.started_at = next((row.started_at for row in pending), None)
 
     def _refresh_tool_group(self, item: ChatItem) -> None:
+        """Rebuild display text and status for a grouped file-operation row.
+
+        重建分组文件操作行的显示文本和状态。
+        """
         members = item.grouped_tool_calls or []
         completed = [member for member in members if member.tool_result_text is not None]
         failures = [
@@ -527,18 +602,27 @@ class TuiState:
             self.add_item("user", skill_invocation.additional_instructions)
 
     def add_thinking_delta(self, delta: str) -> None:
-        """Append a thinking/reasoning fragment to the current thinking block."""
+        """Append a thinking/reasoning fragment to the current thinking block.
+
+        将思考或推理片段追加到当前思考块。
+        """
         if self.items and self.items[-1].role == "thinking":
             self.items[-1].text += delta
             return
         self.add_item("thinking", delta)
 
     def find_tool_item(self, tool_call_id: str) -> ChatItem | None:
-        """Return the transcript item for a tool call id in O(1)."""
+        """Return the transcript item for a tool call id in O(1).
+
+        以 O(1) 时间返回工具调用 ID 对应的记录项目。
+        """
         return self._tool_items_by_call_id.get(tool_call_id)
 
     def record_tool_update(self, tool_call_id: str, message: str) -> ChatItem | None:
-        """Attach live progress to its pending tool call; drop orphan updates."""
+        """Attach live progress to its pending tool call; drop orphan updates.
+
+        将实时进度附加到待处理工具调用，并丢弃孤立更新。
+        """
         item = self.find_tool_item(tool_call_id)
         if item is None:
             return None
@@ -564,7 +648,10 @@ class TuiState:
         result: AgentToolResult,
         is_error: bool,
     ) -> None:
-        """Attach a Pi-compatible tool result to its matching call."""
+        """Attach a Pi-compatible tool result to its matching call.
+
+        将兼容 Pi 的工具结果附加到匹配调用。
+        """
         result_text = format_tool_result_block(
             name=tool_name,
             ok=not is_error,
@@ -600,27 +687,42 @@ class TuiState:
         self._tool_items_by_call_id[tool_call_id] = item
 
     def toggle_tool_results(self) -> bool:
-        """Toggle expanded display for tool results and return the new state."""
+        """Toggle expanded display for tool results and return the new state.
+
+        切换工具结果的展开显示并返回新状态。
+        """
         self.show_tool_results = not self.show_tool_results
         return self.show_tool_results
 
     def toggle_thinking(self) -> bool:
-        """Toggle thinking-token display and return the new state."""
+        """Toggle thinking-token display and return the new state.
+
+        切换思考令牌显示并返回新状态。
+        """
         self.show_thinking = not self.show_thinking
         return self.show_thinking
 
     def update_queue(self, *, steering: tuple[str, ...], follow_up: tuple[str, ...]) -> None:
-        """Replace visible queued-message state."""
+        """Replace visible queued-message state.
+
+        替换可见的排队消息状态。
+        """
         self.queued_steering = steering
         self.queued_follow_up = follow_up
 
     @property
     def queued_message_count(self) -> int:
-        """Return the total number of pending queued messages."""
+        """Return the total number of pending queued messages.
+
+        返回待处理排队消息总数。
+        """
         return len(self.queued_steering) + len(self.queued_follow_up)
 
     def clear(self) -> None:
-        """Clear visible transcript state without modifying durable session history."""
+        """Clear visible transcript state without modifying durable session history.
+
+        清除可见记录状态，而不修改持久会话历史。
+        """
         self.items.clear()
         self._tool_items_by_call_id.clear()
         self._grouped_calls_by_call_id.clear()
@@ -629,11 +731,17 @@ class TuiState:
         self.error = None
 
     def set_skills(self, skills: Iterable[Skill]) -> None:
-        """Replace loaded skill metadata used for presentation-only path matching."""
+        """Replace loaded skill metadata used for presentation-only path matching.
+
+        替换仅用于展示路径匹配的已加载技能元数据。
+        """
         self.skills = tuple(skills)
 
     def load_messages(self, messages: Iterable[AgentMessage]) -> None:
-        """Populate the transcript from restored canonical session messages."""
+        """Populate the transcript from restored canonical session messages.
+
+        使用恢复的规范会话消息填充记录。
+        """
         for message in messages:
             if isinstance(message, UserMessage):
                 self.add_user_message(message.text)
@@ -674,7 +782,10 @@ class TuiState:
         *,
         include_tool_calls: bool = True,
     ) -> None:
-        """Project canonical assistant blocks into display state in order."""
+        """Project canonical assistant blocks into display state in order.
+
+        按顺序将规范助手块投影到显示状态。
+        """
         batch_id = self.new_tool_batch_id() if include_tool_calls and message.tool_calls else None
         allows_mutation_continuation = _is_file_mutation_only_message(message)
         for block in message.content:
@@ -692,13 +803,20 @@ class TuiState:
                 )
 
     def add_assistant_error(self, message: AssistantMessage) -> None:
-        """Project any partial response followed by its terminal error."""
+        """Project any partial response followed by its terminal error.
+
+        投影任意部分响应及其后的终止错误。
+        """
         self.add_assistant_message(message, include_tool_calls=False)
         text = message.error_message or "Error"
         self.error = text
         self.add_item("error", f"Error: {text}")
 
     def _read_skill_name(self, tool_call: ToolCall) -> str | None:
+        """Resolve the loaded skill name referenced by a read tool call.
+
+        解析读取工具调用所引用的已加载技能名称。
+        """
         if tool_call.name != "read":
             return None
         path = _string_argument(tool_call.arguments, "path")
@@ -712,6 +830,10 @@ class TuiState:
 
 
 def _is_file_mutation_only_message(message: AssistantMessage) -> bool:
+    """Return whether a message contains only file mutation tool calls.
+
+    返回消息是否只包含文件变更工具调用。
+    """
     calls = [block for block in message.content if isinstance(block, ToolCall)]
     return (
         bool(calls)
@@ -723,6 +845,10 @@ def _is_file_mutation_only_message(message: AssistantMessage) -> bool:
 
 
 def _parse_branch_summary_message(content: str) -> str | None:
+    """Extract concise display text from a synthetic branch summary.
+
+    从合成分支摘要中提取简洁显示文本。
+    """
     prefix = (
         "The following is a summary of a branch that this conversation came back from:\n<summary>\n"
     )
@@ -733,6 +859,10 @@ def _parse_branch_summary_message(content: str) -> str | None:
 
 
 def _parse_compaction_summary_message(content: str) -> str | None:
+    """Extract concise display text from a compaction summary.
+
+    从压缩摘要中提取简洁显示文本。
+    """
     prefix = "Previous conversation summary:\n"
     if content.startswith(prefix):
         return content.removeprefix(prefix)
@@ -740,7 +870,10 @@ def _parse_compaction_summary_message(content: str) -> str | None:
 
 
 def format_elapsed(seconds: float) -> str:
-    """Format an elapsed duration tersely: 23s, 1m 23s, 1h 2m."""
+    """Format an elapsed duration tersely: 23s, 1m 23s, 1h 2m.
+
+    简洁格式化耗时：23s、1m 23s、1h 2m。
+    """
     total = int(seconds)
     if total < 60:
         return f"{total}s"
@@ -752,7 +885,10 @@ def format_elapsed(seconds: float) -> str:
 
 
 def format_tool_call_block(tool_call: ToolCall, *, compact: bool = True) -> str:
-    """Format a tool call, optionally compacting long bash invocations."""
+    """Format a tool call, optionally compacting long bash invocations.
+
+    格式化工具调用，并可选择压缩较长的 Bash 调用。
+    """
     invocation = format_tool_call_invocation(tool_call, expanded=not compact)
     if tool_call.name == "bash":
         return invocation
@@ -760,7 +896,10 @@ def format_tool_call_block(tool_call: ToolCall, *, compact: bool = True) -> str:
 
 
 def format_tool_call_invocation(tool_call: ToolCall, *, expanded: bool = False) -> str:
-    """Format a tool call as a terse human-readable invocation."""
+    """Format a tool call as a terse human-readable invocation.
+
+    将工具调用格式化为简洁易读的调用说明。
+    """
     arguments = tool_call.arguments
     if tool_call.name == "read":
         path = _string_argument(arguments, "path")
@@ -786,6 +925,10 @@ def format_tool_call_invocation(tool_call: ToolCall, *, expanded: bool = False) 
 def _format_bash_tool_call_invocation(
     arguments: dict[str, JSONValue], *, compact: bool
 ) -> str | None:
+    """Format a Bash tool call from its command and optional description.
+
+    根据命令和可选描述格式化 Bash 工具调用。
+    """
     command = _string_argument(arguments, "command")
     if command is None:
         return None
@@ -802,10 +945,18 @@ def _format_bash_tool_call_invocation(
 
 
 def _normalize_bash_description(description: str) -> str:
+    """Normalize a Bash description for compact transcript display.
+
+    规范化 Bash 描述以便在记录中紧凑显示。
+    """
     return " ".join(description.split())
 
 
 def _read_line_suffix(arguments: dict[str, JSONValue]) -> str:
+    """Build a compact line-range suffix for file-read arguments.
+
+    为文件读取参数构建紧凑的行范围后缀。
+    """
     offset = _int_argument(arguments, "offset")
     limit = _int_argument(arguments, "limit")
     if offset is None and limit is None:
@@ -820,6 +971,10 @@ FALLBACK_INVOCATION_ARGS_CHARS = 160
 
 
 def _fallback_tool_call_invocation(tool_call: ToolCall) -> str:
+    """Build a generic invocation label for an unrecognized tool.
+
+    为无法识别的工具构建通用调用标签。
+    """
     if tool_call.arguments:
         rendered = str(tool_call.arguments)
         if len(rendered) > FALLBACK_INVOCATION_ARGS_CHARS:
@@ -829,15 +984,27 @@ def _fallback_tool_call_invocation(tool_call: ToolCall) -> str:
 
 
 def _string_argument(arguments: dict[str, JSONValue], key: str) -> str | None:
+    """Return one non-empty string tool argument.
+
+    返回一个非空字符串工具参数。
+    """
     value = arguments.get(key)
     return value if isinstance(value, str) else None
 
 
 def _normalized_path(path: str | Path) -> Path:
+    """Expand and normalize a path for presentation matching.
+
+    展开并规范化用于展示匹配的路径。
+    """
     return Path(path).expanduser().resolve(strict=False)
 
 
 def _int_argument(arguments: dict[str, JSONValue], key: str) -> int | None:
+    """Return one integer tool argument while rejecting booleans.
+
+    返回一个整数工具参数，同时拒绝布尔值。
+    """
     value = arguments.get(key)
     if isinstance(value, bool):
         return None
@@ -845,6 +1012,10 @@ def _int_argument(arguments: dict[str, JSONValue], key: str) -> int | None:
 
 
 def _number_argument(arguments: dict[str, JSONValue], key: str) -> int | float | None:
+    """Return one numeric tool argument while rejecting booleans.
+
+    返回一个数值工具参数，同时拒绝布尔值。
+    """
     value = arguments.get(key)
     if isinstance(value, bool):
         return None
@@ -852,7 +1023,10 @@ def _number_argument(arguments: dict[str, JSONValue], key: str) -> int | float |
 
 
 def format_tool_result_summary(*, name: str, ok: bool) -> str:
-    """Format a terse tool result line for orphaned results."""
+    """Format a terse tool result line for orphaned results.
+
+    为孤立结果格式化简洁的工具结果行。
+    """
     status = "✓" if ok else "✗"
     return f"{status} {name}"
 
@@ -864,7 +1038,10 @@ def format_tool_result_block(
     content: str,
     data: dict[str, JSONValue] | None = None,
 ) -> str:
-    """Format a tool result for live and restored transcript blocks."""
+    """Format a tool result for live and restored transcript blocks.
+
+    为实时及恢复的记录块格式化工具结果。
+    """
     status = "✓" if ok else "✗"
     lines = [f"{status} {name}"]
     if content:
@@ -881,7 +1058,10 @@ def format_terminal_command_result_block(
     added_to_context: bool,
     output: str,
 ) -> str:
-    """Format an input-bar terminal command result for visible TUI display."""
+    """Format an input-bar terminal command result for visible TUI display.
+
+    为可见 TUI 显示格式化输入栏终端命令结果。
+    """
     status = "✓" if ok else "✗"
     suffix = " · added to context" if added_to_context else " · not added to context"
     lines = [f"{status} bash{suffix}"]
@@ -903,6 +1083,10 @@ def _result_patch(
 
 
 def _preview_text(text: str, *, max_lines: int) -> str:
+    """Return a bounded line preview for compact transcript rendering.
+
+    返回用于紧凑记录渲染的有界行预览。
+    """
     lines = text.splitlines()
     if not lines:
         return text[:TOOL_RESULT_PREVIEW_CHARS]
