@@ -740,6 +740,35 @@ def test_session_sidebar_groups_skills_by_origin(
     )
 
 
+def test_session_sidebar_orders_configured_tau_home_before_shared_and_project_resources(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    isolate_home(monkeypatch, tmp_path)
+    session = FakeSession()
+    session.cwd = tmp_path / "project"
+    session.skills = (
+        Skill("project-agents", session.cwd / ".agents/skills/project-agents/SKILL.md", ""),
+        Skill("user-tau", tmp_path / ".tau-personal/skills/user-tau/SKILL.md", ""),
+        Skill("project-tau", session.cwd / ".tau/skills/project-tau/SKILL.md", ""),
+        Skill("user-agents", tmp_path / ".agents/skills/user-agents/SKILL.md", ""),
+    )
+    console = Console(record=True, width=80)
+
+    console.print(render_session_sidebar(session))
+
+    output = console.export_text()
+    expected_origins = (
+        "~/.tau-personal/skills",
+        "~/.agents/skills",
+        "./.tau/skills",
+        "./.agents/skills",
+    )
+    assert [output.index(origin) for origin in expected_origins] == sorted(
+        output.index(origin) for origin in expected_origins
+    )
+
+
 def test_session_sidebar_groups_and_shows_all_prompts(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -942,7 +971,7 @@ def test_session_sidebar_brand_includes_current_version() -> None:
 
     console.print(_sidebar_brand(theme=TAU_DARK_THEME))
 
-    assert "τ = 2π  0.4.4" in console.export_text()
+    assert "τ = 2π  0.4.5" in console.export_text()
 
 
 def test_session_sidebar_uses_prominent_title_and_accented_section_headers() -> None:
@@ -6049,7 +6078,14 @@ async def test_session_picker_navigates_projects_in_left_column() -> None:
         session_list = screen.query_one("#session-picker-list", OptionList)
 
         project_labels = [str(option.prompt) for option in project_list.options]
-        assert project_labels == ["● project  1 session", "  elsewhere  1 session"]
+        assert project_labels == ["● project", "  elsewhere"]
+        columns = screen.query_one("#session-picker-columns")
+        project_column = screen.query_one("#session-picker-project-column")
+        session_column = screen.query_one("#session-picker-session-column")
+        assert columns.styles.border.top[0] == "tall"
+        assert project_column.styles.border.top[0] == ""
+        assert project_column.styles.border.right[0] == "tall"
+        assert session_column.styles.border.top[0] == ""
         assert [record.id for record in screen.visible_records] == ["local-1"]
         assert str(screen.query_one("#session-picker-session-title", Static).render()) == (
             "Recent sessions — /workspace/project"
