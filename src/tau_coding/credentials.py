@@ -1,4 +1,7 @@
-"""Local credential storage for Tau provider credentials."""
+"""Local credential storage for Tau provider credentials.
+
+Tau 提供商凭据的本地凭据存储。
+"""
 
 from __future__ import annotations
 
@@ -13,16 +16,24 @@ from tau_coding.paths import TauPaths
 
 
 class CredentialStoreError(ValueError):
-    """Raised when Tau credential storage cannot be read or written."""
+    """Raised when Tau credential storage cannot be read or written.
+
+    Tau 凭据存储无法读取或写入时抛出的异常。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class OAuthCredential:
     """Refreshable OAuth credential persisted under Tau home.
 
+    持久化在 Tau 主目录下的可刷新 OAuth 凭据。
+
     ``account_id`` remains optional so legacy OpenAI Codex credentials load
     unchanged while device-code providers can persist only the metadata they
     actually receive. Provider-specific, non-secret values live in ``metadata``.
+
+    ``account_id`` 保持可选，使旧版 OpenAI Codex 凭据可原样加载，同时设备代码提供商
+    只需持久化实际收到的元数据。提供商专用的非敏感值保存在 ``metadata`` 中。
     """
 
     access: str
@@ -32,7 +43,10 @@ class OAuthCredential:
     metadata: dict[str, JSONValue] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, JSONValue]:
-        """Serialize this OAuth credential to JSON-compatible data."""
+        """Serialize this OAuth credential to JSON-compatible data.
+
+        将此 OAuth 凭据序列化为 JSON 兼容数据。
+        """
         result: dict[str, JSONValue] = {
             "type": "oauth",
             "access": self.access,
@@ -48,12 +62,18 @@ class OAuthCredential:
 
 @dataclass(frozen=True, slots=True)
 class ApiKeyCredential:
-    """API-key credential persisted under Tau home."""
+    """API-key credential persisted under Tau home.
+
+    持久化在 Tau 主目录下的 API 密钥凭据。
+    """
 
     key: str
 
     def to_json(self) -> dict[str, JSONValue]:
-        """Serialize this API key credential to JSON-compatible data."""
+        """Serialize this API key credential to JSON-compatible data.
+
+        将此 API 密钥凭据序列化为 JSON 兼容数据。
+        """
         return {"type": "api_key", "key": self.key}
 
 
@@ -62,7 +82,10 @@ type StoredCredentialKind = Literal["api_key", "oauth"]
 
 
 class CredentialStore(Protocol):
-    """Mutable credential-store operations used by setup integrations."""
+    """Mutable credential-store operations used by setup integrations.
+
+    设置集成使用的可变凭据存储操作。
+    """
 
     def get(self, name: str) -> str | None: ...
 
@@ -74,13 +97,23 @@ class CredentialStore(Protocol):
 
 
 class FileCredentialStore:
-    """Small JSON-backed provider credential store under Tau home."""
+    """Small JSON-backed provider credential store under Tau home.
+
+    Tau 主目录下由 JSON 支持的小型提供商凭据存储。
+    """
 
     def __init__(self, path: Path | None = None) -> None:
+        """Initialize the store at an explicit or default credential path.
+
+        使用显式或默认凭据路径初始化存储。
+        """
         self.path = path or credentials_path()
 
     def get(self, name: str) -> str | None:
-        """Return a stored API-key credential value by name."""
+        """Return a stored API-key credential value by name.
+
+        按名称返回已存储的 API 密钥凭据值。
+        """
         credential = self._load().get(name)
         if isinstance(credential, str):
             return credential
@@ -89,7 +122,10 @@ class FileCredentialStore:
         return None
 
     def set(self, name: str, value: str) -> None:
-        """Store an API-key credential value by name."""
+        """Store an API-key credential value by name.
+
+        按名称存储 API 密钥凭据值。
+        """
         name = _validate_credential_name(name)
         value = value.strip()
         if not value:
@@ -99,18 +135,27 @@ class FileCredentialStore:
         self._save(data)
 
     def set_api_key(self, name: str, value: str) -> None:
-        """Store an API-key credential value by name."""
+        """Store an API-key credential value by name.
+
+        按名称存储 API 密钥凭据值。
+        """
         self.set(name, value)
 
     def get_oauth(self, name: str) -> OAuthCredential | None:
-        """Return a stored OAuth credential by name."""
+        """Return a stored OAuth credential by name.
+
+        按名称返回已存储的 OAuth 凭据。
+        """
         credential = self._load().get(name)
         if isinstance(credential, OAuthCredential):
             return credential
         return None
 
     def set_oauth(self, name: str, credential: OAuthCredential) -> None:
-        """Store a refreshable OAuth credential by name."""
+        """Store a refreshable OAuth credential by name.
+
+        按名称存储可刷新的 OAuth 凭据。
+        """
         name = _validate_credential_name(name)
         _validate_oauth_credential(credential)
         data = self._load()
@@ -118,19 +163,29 @@ class FileCredentialStore:
         self._save(data)
 
     def delete(self, name: str) -> None:
-        """Delete a stored credential value by name."""
+        """Delete a stored credential value by name.
+
+        按名称删除已存储的凭据值。
+        """
         data = self._load()
         data.pop(name, None)
         self._save(data)
 
     def names(self, *, prefix: str | None = None) -> tuple[str, ...]:
-        """Return credential names without exposing their values."""
+        """Return credential names without exposing their values.
+
+        返回凭据名称而不暴露其值。
+        """
         names = tuple(sorted(self._load()))
         if prefix is None:
             return names
         return tuple(name for name in names if name.startswith(prefix))
 
     def _load(self) -> dict[str, StoredCredential]:
+        """Load and validate all persisted credentials.
+
+        加载并校验所有持久化凭据。
+        """
         if not self.path.exists():
             return {}
         raw = loads(self.path.read_text(encoding="utf-8"))
@@ -144,6 +199,10 @@ class FileCredentialStore:
         return credentials
 
     def _save(self, data: dict[str, StoredCredential]) -> None:
+        """Atomically persist credential data with restricted permissions.
+
+        使用受限权限原子持久化凭据数据。
+        """
         self.path.parent.mkdir(parents=True, exist_ok=True)
         raw = {key: _credential_to_json(value) for key, value in data.items()}
         content = dumps(raw, indent=2, sort_keys=True) + "\n"
@@ -168,11 +227,18 @@ class FileCredentialStore:
 
 
 def credentials_path(paths: TauPaths | None = None) -> Path:
-    """Return Tau's local provider credential path."""
+    """Return Tau's local provider credential path.
+
+    返回 Tau 的本地提供商凭据路径。
+    """
     return (paths or TauPaths()).home / "credentials.json"
 
 
 def _validate_credential_name(name: str) -> str:
+    """Normalize and validate a credential name.
+
+    规范化并校验凭据名称。
+    """
     normalized = name.strip()
     if not normalized:
         raise CredentialStoreError("Credential name must not be empty")
@@ -180,6 +246,10 @@ def _validate_credential_name(name: str) -> str:
 
 
 def _validate_oauth_credential(credential: OAuthCredential) -> None:
+    """Validate required fields of an OAuth credential before persistence.
+
+    在持久化前校验 OAuth 凭据的必填字段。
+    """
     if not credential.access.strip():
         raise CredentialStoreError("OAuth access token must not be empty")
     if not credential.refresh.strip():
@@ -192,6 +262,10 @@ def _validate_oauth_credential(credential: OAuthCredential) -> None:
 
 
 def _credential_from_json(value: object) -> StoredCredential:
+    """Parse one stored credential from JSON-compatible data.
+
+    从 JSON 兼容数据解析一个已存储凭据。
+    """
     if isinstance(value, str):
         return value
     if not isinstance(value, dict):
@@ -224,12 +298,20 @@ def _credential_from_json(value: object) -> StoredCredential:
 
 
 def _credential_to_json(value: StoredCredential) -> str | dict[str, JSONValue]:
+    """Convert one stored credential into JSON-compatible data.
+
+    将一个已存储凭据转换为 JSON 兼容数据。
+    """
     if isinstance(value, str):
         return value
     return value.to_json()
 
 
 def _validate_oauth_metadata(metadata: dict[Any, Any]) -> None:
+    """Validate provider-specific OAuth metadata as a JSON object.
+
+    将提供商专用 OAuth 元数据校验为 JSON 对象。
+    """
     for key, value in metadata.items():
         if not isinstance(key, str) or not key.strip():
             raise CredentialStoreError("Tau oauth credential metadata keys must be strings")
@@ -238,6 +320,10 @@ def _validate_oauth_metadata(metadata: dict[Any, Any]) -> None:
 
 
 def _is_json_value(value: object) -> bool:
+    """Return whether a value can be represented safely in JSON.
+
+    返回值是否可安全表示为 JSON。
+    """
     if value is None or isinstance(value, str | bool | int | float):
         return True
     if isinstance(value, list):

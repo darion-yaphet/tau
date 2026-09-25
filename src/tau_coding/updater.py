@@ -1,4 +1,7 @@
-"""Upgrade Tau with the package manager that owns its environment."""
+"""Upgrade Tau with the package manager that owns its environment.
+
+使用拥有当前环境的包管理器升级 Tau。
+"""
 
 from __future__ import annotations
 
@@ -28,7 +31,10 @@ InstallMethod = Literal["uv-tool", "uv-pip", "pipx", "pip"]
 
 @dataclass(frozen=True, slots=True)
 class UpdateResult:
-    """Result of trying to upgrade Tau."""
+    """Result of trying to upgrade Tau.
+
+    尝试升级 Tau 的结果。
+    """
 
     command: tuple[str, ...] | None
     stdout: str = ""
@@ -38,6 +44,10 @@ class UpdateResult:
 
     @property
     def succeeded(self) -> bool:
+        """Return whether an update command completed successfully.
+
+        返回更新命令是否成功完成。
+        """
         return self.command is not None
 
 
@@ -58,10 +68,16 @@ def update_tau(
 ) -> UpdateResult:
     """Upgrade Tau with the installer that owns the active environment.
 
+    使用拥有当前活动环境的安装器升级 Tau。
+
     Python distributions record their installer in ``INSTALLER``. uv and pipx
     tool environments also leave ownership receipts. Managed, editable,
     direct-URL, and unrecognized installations stop with instructions instead
     of trying unrelated package managers.
+
+    Python 发行版会在 ``INSTALLER`` 中记录安装器。uv 和 pipx 工具环境也会留下
+    所有权凭据。受管理、可编辑、直接 URL 及无法识别的安装会停止并给出说明，
+    而不会尝试无关的包管理器。
     """
     prefix = (environment_prefix or Path(sys.prefix)).resolve()
     if inspect_distribution:
@@ -119,7 +135,10 @@ def update_tau(
 
 
 def detect_install_method(prefix: Path, *, installer: str | None = None) -> InstallMethod | None:
-    """Detect installer ownership from receipts and distribution metadata."""
+    """Detect installer ownership from receipts and distribution metadata.
+
+    从凭据和发行版元数据检测安装器所有权。
+    """
     if (prefix / "uv-receipt.toml").is_file():
         return "uv-tool"
     if (prefix / "pipx_metadata.json").is_file():
@@ -138,6 +157,10 @@ def _update_command(
     *,
     latest_version: str | None = None,
 ) -> tuple[str, ...]:
+    """Build the installer-specific command used to upgrade Tau.
+
+    构建用于升级 Tau 的安装器专用命令。
+    """
     if method == "uv-tool":
         if latest_version is None:
             raise ValueError("latest_version is required for uv tool updates")
@@ -238,6 +261,10 @@ def _handoff_windows_update(
     parent_pid: int,
     handoff_directory: Path | None,
 ) -> UpdateResult:
+    """Stage a detached PowerShell process that updates Tau after exit.
+
+    暂存一个分离的 PowerShell 进程，在 Tau 退出后执行更新。
+    """
     powershell = executable_finder("powershell.exe") or executable_finder("pwsh.exe")
     if powershell is None:
         return _failure("Could not find PowerShell to safely finish the Windows update.")
@@ -308,7 +335,10 @@ def _handoff_windows_update(
 
 
 def _quote_windows_argument(argument: str) -> str:
-    """Quote one argv element using the documented Microsoft C runtime rules."""
+    """Quote one argv element using the documented Microsoft C runtime rules.
+
+    使用有文档说明的 Microsoft C 运行时规则引用一个 argv 元素。
+    """
     quoted = ['"']
     backslashes = 0
     for character in argument:
@@ -328,7 +358,10 @@ def _quote_windows_argument(argument: str) -> str:
 
 
 def _windows_command_line(arguments: tuple[str, ...]) -> str:
-    """Build the argv tail passed directly to CreateProcess by ProcessStartInfo."""
+    """Build the argv tail passed directly to CreateProcess by ProcessStartInfo.
+
+    构建由 ProcessStartInfo 直接传给 CreateProcess 的 argv 尾部。
+    """
     return " ".join(_quote_windows_argument(argument) for argument in arguments)
 
 
@@ -338,6 +371,10 @@ def _cleanup_windows_handoff(
     *,
     remove_directory: bool,
 ) -> None:
+    """Remove staged Windows update artifacts after a failed handoff.
+
+    在交接失败后移除暂存的 Windows 更新产物。
+    """
     if script_path is not None:
         with suppress(OSError):
             script_path.unlink(missing_ok=True)
@@ -347,6 +384,10 @@ def _cleanup_windows_handoff(
 
 
 def _installed_direct_url() -> str | None:
+    """Return the direct installation source recorded by package metadata.
+
+    返回包元数据记录的直接安装源。
+    """
     raw = _distribution_file("direct_url.json")
     if not raw:
         return None
@@ -359,6 +400,10 @@ def _installed_direct_url() -> str | None:
 
 
 def _installed_installer() -> str | None:
+    """Return the installer name recorded by package metadata.
+
+    返回包元数据记录的安装器名称。
+    """
     raw = _distribution_file("INSTALLER")
     if not raw:
         return None
@@ -366,6 +411,10 @@ def _installed_installer() -> str | None:
 
 
 def _distribution_file(filename: str) -> str | None:
+    """Read one metadata file from the installed Tau distribution.
+
+    从已安装的 Tau 发行版读取一个元数据文件。
+    """
     try:
         return distribution(PYPI_PACKAGE_NAME).read_text(filename)
     except PackageNotFoundError:
@@ -373,6 +422,10 @@ def _distribution_file(filename: str) -> str | None:
 
 
 def _run(runner: CommandRunner, command: tuple[str, ...]) -> CompletedProcess[str] | str:
+    """Run an update command and convert launch errors to safe text.
+
+    运行更新命令，并将启动错误转换为安全文本。
+    """
     try:
         return runner(command, capture_output=True, text=True, check=False)
     except OSError as exc:
@@ -380,8 +433,16 @@ def _run(runner: CommandRunner, command: tuple[str, ...]) -> CompletedProcess[st
 
 
 def _result_detail(result: CompletedProcess[str]) -> str:
+    """Extract concise diagnostic detail from a failed command result.
+
+    从失败的命令结果中提取简洁诊断详情。
+    """
     return result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
 
 
 def _failure(message: str) -> UpdateResult:
+    """Create a failed update result with one user-facing message.
+
+    使用一条面向用户的消息创建失败更新结果。
+    """
     return UpdateResult(command=None, failures=(message,))

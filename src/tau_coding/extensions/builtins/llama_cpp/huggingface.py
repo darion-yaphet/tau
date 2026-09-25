@@ -1,4 +1,7 @@
-"""Hugging Face GGUF discovery for llama.cpp server-side downloads."""
+"""Hugging Face GGUF discovery for llama.cpp server-side downloads.
+
+用于 llama.cpp 服务端下载的 Hugging Face GGUF 发现。
+"""
 
 from __future__ import annotations
 
@@ -20,24 +23,38 @@ _EXACT_REPOSITORY = re.compile(r"^[^\s/:]+/[^\s/:]+(?::[^\s:]+)?$")
 
 
 class HuggingFaceSearchError(RuntimeError):
-    """A secret-free Hugging Face search/details failure."""
+    """A secret-free Hugging Face search/details failure.
+
+    不含敏感信息的 Hugging Face 搜索或详情故障。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class GgufVariant:
+    """One downloadable GGUF file variant from a repository.
+
+    仓库中的一个可下载 GGUF 文件变体。
+    """
     quantization: str
     size_bytes: int | None
 
 
 @dataclass(frozen=True, slots=True)
 class GgufRepository:
+    """A Hugging Face repository and its compatible GGUF variants.
+
+    Hugging Face 仓库及其兼容的 GGUF 变体。
+    """
     id: str
     gated: bool
     variants: tuple[GgufVariant, ...]
 
 
 def validate_repository_reference(value: str) -> str:
-    """Return one exact owner/repository[:quantization] download reference."""
+    """Return one exact owner/repository[:quantization] download reference.
+
+    返回精确的 owner/repository[:quantization] 下载引用。
+    """
     normalized = value.strip()
     if not _EXACT_REPOSITORY.fullmatch(normalized):
         raise HuggingFaceSearchError(
@@ -51,7 +68,10 @@ def discover_hf_token(
     *,
     token_paths: Sequence[Path] | None = None,
 ) -> str | None:
-    """Read a search-only token from environment or standard HF token files."""
+    """Read a search-only token from environment or standard HF token files.
+
+    从环境或标准 HF 令牌文件读取仅用于搜索的令牌。
+    """
     token = environment.get(HF_TOKEN_ENV, "").strip()
     if token:
         return token
@@ -73,7 +93,10 @@ async def search_gguf_repositories(
     token: str | None,
     limit: int = 10,
 ) -> tuple[GgufRepository, ...]:
-    """Search repositories, or inspect one exact owner/repository reference."""
+    """Search repositories, or inspect one exact owner/repository reference.
+
+    搜索仓库，或检查一个精确的 owner/repository 引用。
+    """
     normalized = query.strip()
     exact = normalized.rsplit(":", 1)[0] if _EXACT_REPOSITORY.fullmatch(normalized) else None
     if exact is not None:
@@ -110,6 +133,10 @@ async def repository_details(
     *,
     token: str | None,
 ) -> GgufRepository:
+    """Fetch compatible GGUF variants for one exact repository.
+
+    获取一个精确仓库的兼容 GGUF 变体。
+    """
     response = await client.get(
         f"{HF_API_ROOT}/models/{repository}",
         headers=_headers(token),
@@ -156,6 +183,10 @@ async def repository_details(
 
 
 def _file_size(raw: Mapping[str, object]) -> int | None:
+    """Extract a non-negative file size from Hugging Face metadata.
+
+    从 Hugging Face 元数据提取非负文件大小。
+    """
     size = raw.get("size")
     lfs = raw.get("lfs")
     if not isinstance(size, int) and isinstance(lfs, Mapping):
@@ -164,10 +195,18 @@ def _file_size(raw: Mapping[str, object]) -> int | None:
 
 
 def _headers(token: str | None) -> dict[str, str]:
+    """Build search request headers with an optional bearer token.
+
+    使用可选持有者令牌构建搜索请求头。
+    """
     return {"Authorization": f"Bearer {token}"} if token else {}
 
 
 def _json(response: httpx.Response) -> object:
+    """Decode a Hugging Face response or raise a safe search error.
+
+    解码 Hugging Face 响应，失败时抛出安全搜索错误。
+    """
     try:
         return response.json()
     except ValueError as exc:
@@ -175,6 +214,10 @@ def _json(response: httpx.Response) -> object:
 
 
 def _raise_http(response: httpx.Response, operation: str) -> None:
+    """Raise a bounded diagnostic for an unsuccessful HTTP response.
+
+    为不成功的 HTTP 响应抛出有界诊断。
+    """
     if response.status_code in {401, 403}:
         raise HuggingFaceSearchError(
             "Hugging Face denied access. Accept the repository terms and provide HF_TOKEN "
@@ -190,6 +233,10 @@ def _raise_http(response: httpx.Response, operation: str) -> None:
 
 
 def _standard_token_paths(environment: Mapping[str, str]) -> tuple[Path, ...]:
+    """Return standard Hugging Face token paths for an environment snapshot.
+
+    返回环境快照对应的标准 Hugging Face 令牌路径。
+    """
     home = Path(environment.get("HOME") or Path.home())
     explicit = environment.get("HF_TOKEN_PATH", "").strip()
     hf_home = environment.get("HF_HOME", "").strip()

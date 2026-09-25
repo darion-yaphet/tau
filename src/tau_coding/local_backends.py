@@ -1,9 +1,14 @@
 """Provider-neutral local-backend contracts and generation-local registry.
 
+与提供者无关的本地后端协议和代际内注册表。
+
 Backends describe protocol work and structured data.  They never construct UI
 widgets or receive a frontend object.  The registry owns source/generation
 identity, cancellation, and stale-result containment; the host owns rendering
 and session/model selection.
+
+后端描述协议工作和结构化数据，不会构造 UI 控件，也不会接收前端对象。注册表负责
+来源/代际身份、取消和过期结果收容；宿主负责渲染以及会话和模型选择。
 """
 
 from __future__ import annotations
@@ -51,19 +56,30 @@ LocalDiagnosticSeverity = Literal["info", "warning", "error"]
 
 
 class LocalBackendError(ValueError):
-    """Raised when a backend contract or registration is invalid."""
+    """Raised when a backend contract or registration is invalid.
+
+    后端协议或注册项无效时抛出。
+    """
 
 
 class LocalOperationError(RuntimeError):
-    """Raised for host-owned local operation failures."""
+    """Raised for host-owned local operation failures.
+
+    宿主管理的本地操作失败时抛出。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class LocalConfigField:
     """One host-rendered configuration field.
 
+    一个由宿主渲染的配置字段。
+
     ``secret`` values are accepted only through :class:`LocalConfigValues` and
     are deliberately excluded from reprs and diagnostics by the host.
+
+    ``secret`` 值只能通过 :class:`LocalConfigValues` 接收，且宿主会有意将其从 repr 和
+    诊断信息中排除。
     """
 
     key: str
@@ -74,6 +90,10 @@ class LocalConfigField:
     choices: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
+        """Validate field names, types, and choices before exposing the schema.
+
+        在公开配置模式前验证字段名称、类型和选项。
+        """
         _non_empty(self.key, "Configuration field key")
         _non_empty(self.label, "Configuration field label")
         if self.kind not in {"text", "secret", "choice"}:
@@ -98,11 +118,18 @@ class LocalConfigField:
 
 @dataclass(frozen=True, slots=True)
 class LocalConfigureSpec:
-    """Complete configuration schema rendered by the host."""
+    """Complete configuration schema rendered by the host.
+
+    由宿主渲染的完整配置模式。
+    """
 
     fields: tuple[LocalConfigField, ...] = ()
 
     def __post_init__(self) -> None:
+        """Validate field values and ensure keys are unique.
+
+        验证字段值并确保键名唯一。
+        """
         if not isinstance(self.fields, tuple) or any(
             not isinstance(field, LocalConfigField) for field in self.fields
         ):
@@ -119,15 +146,24 @@ ReadConfigureSpec = LocalConfigureSpec | Callable[[], LocalConfigureSpec]
 class LocalConfigValues(Mapping[str, str]):
     """Ephemeral submitted configuration values.
 
+    临时提交的配置值。
+
     The mapping remains usable by backend code, but its values never appear in
     reprs.  Backends should not retain it after their transactional configure
     callback returns.
+
+    后端代码仍可使用此映射，但其中的值不会出现在 repr 中。事务式 configure 回调返回后，
+    后端不应继续保留此映射。
     """
 
     _values: Mapping[str, str] = field(repr=False)
     secret_keys: frozenset[str] = field(default_factory=frozenset, repr=False)
 
     def __post_init__(self) -> None:
+        """Copy submitted strings into an immutable, secret-aware mapping.
+
+        将提交的字符串复制到不可变且可标记机密字段的映射中。
+        """
         copied: dict[str, str] = {}
         for key, value in self._values.items():
             if not isinstance(key, str) or not isinstance(value, str):
@@ -139,27 +175,50 @@ class LocalConfigValues(Mapping[str, str]):
         object.__setattr__(self, "secret_keys", frozenset(self.secret_keys))
 
     def __getitem__(self, key: str) -> str:
+        """Return the submitted value for one field key.
+
+        返回指定字段键对应的提交值。
+        """
         return self._values[key]
 
     def __iter__(self):  # type: ignore[no-untyped-def]
+        """Iterate over submitted configuration field keys.
+
+        遍历已提交配置字段的键。
+        """
         return iter(self._values)
 
     def __len__(self) -> int:
+        """Return the number of submitted configuration fields.
+
+        返回已提交配置字段的数量。
+        """
         return len(self._values)
 
     def __repr__(self) -> str:
+        """Represent only field names so secret values remain hidden.
+
+        仅表示字段名称，以隐藏机密值。
+        """
         return f"LocalConfigValues(keys={tuple(self._values)!r})"
 
 
 @dataclass(frozen=True, slots=True)
 class LocalModel:
-    """Safe model information returned by a local backend."""
+    """Safe model information returned by a local backend.
+
+    本地后端返回的安全模型信息。
+    """
 
     id: str
     display_name: str | None = None
     state: str | None = None
 
     def __post_init__(self) -> None:
+        """Validate model identifiers and optional display fields.
+
+        验证模型标识符和可选的显示字段。
+        """
         _identifier(self.id, "Local model id")
         if self.display_name is not None:
             _non_empty(self.display_name, "Local model display name")
@@ -169,13 +228,20 @@ class LocalModel:
 
 @dataclass(frozen=True, slots=True)
 class LocalDiagnostic:
-    """Secret-free diagnostic suitable for host rendering."""
+    """Secret-free diagnostic suitable for host rendering.
+
+    适合由宿主渲染且不包含机密的诊断信息。
+    """
 
     message: str
     severity: LocalDiagnosticSeverity = "info"
     stage: str | None = None
 
     def __post_init__(self) -> None:
+        """Validate diagnostic content and severity.
+
+        验证诊断内容和严重级别。
+        """
         _non_empty(self.message, "Diagnostic message")
         if self.severity not in {"info", "warning", "error"}:
             raise LocalBackendError("Diagnostic severity is unsupported")
@@ -185,13 +251,20 @@ class LocalDiagnostic:
 
 @dataclass(frozen=True, slots=True)
 class LocalProgress:
-    """Bounded progress update emitted by a backend operation."""
+    """Bounded progress update emitted by a backend operation.
+
+    后端操作发出的有界进度更新。
+    """
 
     message: str
     fraction: float | None = None
     done: bool = False
 
     def __post_init__(self) -> None:
+        """Validate the progress message, fraction, and completion flag.
+
+        验证进度消息、比例和完成标记。
+        """
         _non_empty(self.message, "Progress message")
         if self.fraction is not None and not 0 <= self.fraction <= 1:
             raise LocalBackendError("Progress fraction must be between 0 and 1")
@@ -201,7 +274,10 @@ class LocalProgress:
 
 @dataclass(frozen=True, slots=True)
 class LocalArtifactOption:
-    """One backend-neutral variant offered for a discovered artifact."""
+    """One backend-neutral variant offered for a discovered artifact.
+
+    为发现的资源提供的一个通用变体选项。
+    """
 
     id: str
     label: str
@@ -209,6 +285,10 @@ class LocalArtifactOption:
     recommended: bool = False
 
     def __post_init__(self) -> None:
+        """Validate an artifact variant and its optional size metadata.
+
+        验证资源变体及其可选的大小元数据。
+        """
         _identifier(self.id, "Artifact option id")
         _non_empty(self.label, "Artifact option label")
         if self.size_bytes is not None and (
@@ -223,7 +303,10 @@ class LocalArtifactOption:
 
 @dataclass(frozen=True, slots=True)
 class LocalSearchResult:
-    """One host-renderable backend search result and its selectable variants."""
+    """One host-renderable backend search result and its selectable variants.
+
+    一条可由宿主渲染的后端搜索结果及其可选变体。
+    """
 
     id: str
     label: str
@@ -232,6 +315,10 @@ class LocalSearchResult:
     diagnostic: str | None = None
 
     def __post_init__(self) -> None:
+        """Validate result fields and ensure option identifiers are unique.
+
+        验证结果字段并确保选项标识符唯一。
+        """
         _identifier(self.id, "Search result id")
         _non_empty(self.label, "Search result label")
         if not isinstance(self.restricted, bool):
@@ -248,13 +335,20 @@ class LocalSearchResult:
 
 @dataclass(frozen=True, slots=True)
 class LocalConfirmationChoice:
-    """One host-rendered option answering a backend confirmation request."""
+    """One host-rendered option answering a backend confirmation request.
+
+    用于回答后端确认请求的一个宿主渲染选项。
+    """
 
     value: str
     label: str
     recommended: bool = False
 
     def __post_init__(self) -> None:
+        """Validate a confirmation choice and its recommended flag.
+
+        验证确认选项及其推荐标记。
+        """
         _identifier(self.value, "Confirmation choice value")
         _non_empty(self.label, "Confirmation choice label")
         if not isinstance(self.recommended, bool):
@@ -265,16 +359,25 @@ class LocalConfirmationChoice:
 class LocalConfirmationRequest:
     """An explicit decision a backend needs before an operation may proceed.
 
+    后端在继续操作前需要用户明确作出的决定。
+
     Backends declare structured questions; the host renders, confirms, and
     resubmits the chosen value through the operation context.  A request is
     never an instruction for the host to guess: an unanswered request leaves
     the operation uncommitted.
+
+    后端声明结构化问题，由宿主进行渲染、确认，并通过操作上下文重新提交所选值。
+    它绝不是让宿主自行猜测的指令：如果没有得到回答，操作就不会提交。
     """
 
     message: str
     choices: tuple[LocalConfirmationChoice, ...]
 
     def __post_init__(self) -> None:
+        """Validate the request and its unique choices.
+
+        验证确认请求及其唯一选项。
+        """
         _non_empty(self.message, "Confirmation request message")
         if not isinstance(self.choices, tuple) or not self.choices:
             raise LocalBackendError("Confirmation request choices must be a non-empty tuple")
@@ -289,7 +392,10 @@ class LocalConfirmationRequest:
 
 @dataclass(frozen=True, slots=True)
 class LocalBackendStatus:
-    """Structured status snapshot; no backend-specific protocol vocabulary."""
+    """Structured status snapshot; no backend-specific protocol vocabulary.
+
+    结构化状态快照，不包含特定后端协议术语。
+    """
 
     state: LocalConnectionState
     endpoint_display: str | None = None
@@ -302,6 +408,10 @@ class LocalBackendStatus:
     stale: bool = False
 
     def __post_init__(self) -> None:
+        """Validate the connection state, models, actions, and diagnostics.
+
+        验证连接状态、模型、操作和诊断信息。
+        """
         if self.state not in {
             "unconfigured",
             "connecting",
@@ -352,7 +462,10 @@ class LocalBackendStatus:
 
 @dataclass(frozen=True, slots=True)
 class LocalOperationContext:
-    """Inputs owned by one backend operation."""
+    """Inputs owned by one backend operation.
+
+    由一次后端操作拥有的输入和回调。
+    """
 
     signal: SimpleCancellationToken
     action: LocalAction
@@ -365,21 +478,35 @@ class LocalOperationContext:
 
     @property
     def cancelled(self) -> bool:
+        """Return whether cancellation was requested for this operation.
+
+        返回此操作是否已收到取消请求。
+        """
         return self.signal.is_cancelled()
 
     @property
     def stale(self) -> bool:
+        """Return whether the operation's backend layer is no longer current.
+
+        返回此操作所属的后端层是否已不再有效。
+        """
         return not self._is_current()
 
     def report_progress(self, progress: LocalProgress) -> None:
-        """Publish one structured progress event to the host."""
+        """Publish one structured progress event to the host.
+
+        向宿主发布一条结构化进度事件。
+        """
         if not self.cancelled and not self.stale:
             self._progress(progress)
 
 
 @dataclass(frozen=True, slots=True)
 class LocalOperationResult:
-    """Common host-renderable operation result."""
+    """Common host-renderable operation result.
+
+    通用的宿主可渲染操作结果。
+    """
 
     backend_status: LocalBackendStatus | None = None
     message: str | None = None
@@ -394,6 +521,10 @@ class LocalOperationResult:
     search_results: tuple[LocalSearchResult, ...] = ()
 
     def __post_init__(self) -> None:
+        """Validate all structured fields in the host-facing result.
+
+        验证宿主可见结果中的所有结构化字段。
+        """
         if self.message is not None and not isinstance(self.message, str):
             raise LocalBackendError("Operation message must be a string or None")
         if not isinstance(self.diagnostics, tuple) or any(
@@ -425,7 +556,10 @@ class LocalOperationResult:
 
 @dataclass(frozen=True, slots=True)
 class LocalConfigureResult:
-    """Backend result for a transactional configuration attempt."""
+    """Backend result for a transactional configuration attempt.
+
+    后端对一次事务式配置尝试返回的结果。
+    """
 
     committed: bool = False
     backend_status: LocalBackendStatus | None = None
@@ -446,7 +580,10 @@ class LocalBackendLayerToken:
 
 @dataclass(frozen=True, slots=True)
 class LocalBackendView:
-    """A backend plus effective-source information for host rendering."""
+    """A backend plus effective-source information for host rendering.
+
+    后端及其生效来源信息，供宿主渲染使用。
+    """
 
     backend: LocalBackend
     token: LocalBackendLayerToken
@@ -455,11 +592,25 @@ class LocalBackendView:
 
     @property
     def use_available(self) -> bool:
+        """Return whether the provider layer permits using this backend.
+
+        返回对应提供者层是否允许使用此后端。
+        """
         return self.provider_layer_effective
 
 
 class ProgressCallback(Protocol):
-    def __call__(self, progress: LocalProgress) -> None: ...
+    """Callable contract for receiving structured backend progress.
+
+    接收结构化后端进度的可调用协议。
+    """
+
+    def __call__(self, progress: LocalProgress) -> None:
+        """Receive one structured backend progress event.
+
+        接收一个结构化后端进度事件。
+        """
+        ...
 
 
 ConfigureLocalBackend = Callable[
@@ -487,7 +638,10 @@ SearchModels = ManageModel
 
 @dataclass(frozen=True, slots=True)
 class LocalBackend:
-    """Provider-neutral local backend capability declaration."""
+    """Provider-neutral local backend capability declaration.
+
+    与提供者无关的本地后端能力声明。
+    """
 
     id: str
     provider_id: str
@@ -505,6 +659,10 @@ class LocalBackend:
     recommended: bool = False
 
     def __post_init__(self) -> None:
+        """Validate backend identifiers and required/optional callbacks.
+
+        验证后端标识符以及必需和可选回调。
+        """
         _identifier(self.id, "Local backend id")
         _identifier(self.provider_id, "Local backend provider id")
         _non_empty(self.display_name, "Local backend display name")
@@ -528,6 +686,10 @@ class LocalBackend:
                 raise LocalBackendError("Local backend capability must be callable")
 
     def read_configure_spec(self) -> LocalConfigureSpec:
+        """Resolve and validate the backend's configuration form schema.
+
+        解析并验证后端的配置表单模式。
+        """
         value = self.configure_spec() if callable(self.configure_spec) else self.configure_spec
         if not isinstance(value, LocalConfigureSpec):
             raise LocalBackendError("Local backend configure_spec returned an unsupported value")
@@ -536,6 +698,10 @@ class LocalBackend:
 
 @dataclass(eq=False, slots=True)
 class _Operation:
+    """One supervised backend operation with progress and cancellation state.
+
+    一个带进度和取消状态的受监管后端操作。
+    """
     signal: SimpleCancellationToken
     task: asyncio.Task[LocalOperationResult]
     progress: list[LocalProgress]
@@ -546,7 +712,10 @@ class _Operation:
 
 
 class LocalBackendRegistry:
-    """Generation-local, source-bound local backend registry."""
+    """Generation-local, source-bound local backend registry.
+
+    代际本地且绑定来源的本地后端注册表。
+    """
 
     def __init__(
         self,
@@ -555,6 +724,10 @@ class LocalBackendRegistry:
         generation_id: str | None = None,
         recommended_backend_id: str | None = None,
     ) -> None:
+        """Initialize a backend generation paired with a provider registry.
+
+        初始化与提供商注册表配对的后端代际。
+        """
         self._providers = provider_registry
         self._generation_id = generation_id or provider_registry.generation_id
         if self._generation_id != provider_registry.generation_id:
@@ -569,10 +742,17 @@ class LocalBackendRegistry:
 
     @property
     def generation_id(self) -> str:
+        """Return this backend registry's generation identity.
+
+        返回此后端注册表的代际标识。
+        """
         return self._generation_id
 
     def register(self, source_id: str, backend: LocalBackend) -> LocalBackendLayerToken:
-        """Register a backend only against its exact source provider layer."""
+        """Register a backend only against its exact source provider layer.
+
+        仅针对精确的同来源提供商层注册后端。
+        """
         self._assert_active()
         source = _source_id(source_id)
         provider_layer = self._providers.layer_token(backend.provider_id, source)
@@ -599,7 +779,10 @@ class LocalBackendRegistry:
         return token
 
     def unregister(self, backend_id: str, source_id: str) -> bool:
-        """Remove one exact source layer and preserve preceding layers."""
+        """Remove one exact source layer and preserve preceding layers.
+
+        移除一个精确来源层并保留先前层。
+        """
         source = _source_id(source_id)
         current = self._layers.get(backend_id, [])
         removed = [item for item in current if item[0].source_id == source]
@@ -615,14 +798,26 @@ class LocalBackendRegistry:
         return True
 
     def unregister_source(self, source_id: str) -> None:
+        """Remove every backend layer owned by one source.
+
+        移除一个来源拥有的所有后端层。
+        """
         source = _source_id(source_id)
         for backend_id in tuple(self._layers):
             self.unregister(backend_id, source)
 
     def layers(self, backend_id: str) -> tuple[LocalBackendLayerToken, ...]:
+        """Return active layer tokens for one backend in precedence order.
+
+        按优先级顺序返回一个后端的活动层令牌。
+        """
         return tuple(token for token, _, _ in self._layers.get(backend_id, ()))
 
     def effective(self, backend_id: str) -> LocalBackendView | None:
+        """Return the effective backend and whether its provider layer is usable.
+
+        返回有效后端及其提供商层是否可用。
+        """
         current = self._layers.get(backend_id)
         if not current:
             return None
@@ -642,7 +837,10 @@ class LocalBackendRegistry:
         )
 
     def all_views(self, backend_id: str) -> tuple[LocalBackendView, ...]:
-        """Return every source layer, including shadowed backend layers."""
+        """Return every source layer, including shadowed backend layers.
+
+        返回所有来源层，包括被遮蔽的后端层。
+        """
         views: list[LocalBackendView] = []
         for token, backend, _ in self._layers.get(backend_id, ()):
             provider = self._providers.layer_token(backend.provider_id, token.source_id)
@@ -662,12 +860,18 @@ class LocalBackendRegistry:
         return tuple(views)
 
     def effective_backends(self) -> tuple[LocalBackendView, ...]:
-        """Return one view per backend in deterministic registration order."""
+        """Return one view per backend in deterministic registration order.
+
+        按确定性注册顺序为每个后端返回一个视图。
+        """
         views = [self.effective(backend_id) for backend_id in self._layers]
         return tuple(view for view in views if view is not None)
 
     def operation_running(self, backend_id: str, action: LocalAction) -> bool:
-        """Return whether one effective backend action is still in flight."""
+        """Return whether one effective backend action is still in flight.
+
+        返回一个有效后端操作是否仍在进行。
+        """
         return any(
             token.backend_id == backend_id and operation == action and not state.task.done()
             for (token, operation), state in self._operations.items()
@@ -679,7 +883,10 @@ class LocalBackendRegistry:
         action: LocalAction,
         callback: ProgressCallback,
     ) -> Callable[[], None] | None:
-        """Observe one running action and replay its best current progress."""
+        """Observe one running action and replay its best current progress.
+
+        观察一个运行中的操作并重放其最佳当前进度。
+        """
         state = next(
             (
                 state
@@ -697,12 +904,20 @@ class LocalBackendRegistry:
                 callback(current)
 
         def unsubscribe() -> None:
+            """Detach one progress listener from the running operation.
+
+            从运行中的操作分离一个进度监听器。
+            """
             with suppress(ValueError):
                 state.listeners.remove(callback)
 
         return unsubscribe
 
     def cancel(self, backend_id: str, action: LocalAction | None = None) -> bool:
+        """Request cancellation for matching backend operations.
+
+        请求取消匹配的后端操作。
+        """
         cancelled = False
         for (token, operation), state in tuple(self._operations.items()):
             if token.backend_id == backend_id and (action is None or operation == action):
@@ -716,6 +931,10 @@ class LocalBackendRegistry:
         *,
         progress: ProgressCallback | None = None,
     ) -> LocalOperationResult:
+        """Validate values and run one transactional backend configuration.
+
+        校验值并运行一次事务式后端配置。
+        """
         view = self._require_view(backend_id)
         spec = view.backend.read_configure_spec()
         config_values, errors = _validate_values(spec, values)
@@ -735,6 +954,10 @@ class LocalBackendRegistry:
     async def status(
         self, backend_id: str, *, progress: ProgressCallback | None = None
     ) -> LocalOperationResult:
+        """Read current backend status through the supervised operation path.
+
+        通过受监管操作路径读取当前后端状态。
+        """
         view = self._require_view(backend_id)
         return await self._run(
             view,
@@ -746,6 +969,10 @@ class LocalBackendRegistry:
     async def refresh(
         self, backend_id: str, *, progress: ProgressCallback | None = None
     ) -> LocalOperationResult:
+        """Refresh backend discovery through the supervised operation path.
+
+        通过受监管操作路径刷新后端发现。
+        """
         view = self._require_view(backend_id)
         return await self._run(
             view,
@@ -757,6 +984,10 @@ class LocalBackendRegistry:
     async def doctor(
         self, backend_id: str, *, progress: ProgressCallback | None = None
     ) -> LocalOperationResult:
+        """Run optional backend diagnostics or return unavailable guidance.
+
+        运行可选后端诊断，或返回不可用指引。
+        """
         view = self._require_view(backend_id)
         doctor = view.backend.doctor
         if doctor is None:
@@ -773,6 +1004,10 @@ class LocalBackendRegistry:
     async def reset(
         self, backend_id: str, *, progress: ProgressCallback | None = None
     ) -> LocalOperationResult:
+        """Reset an effective backend when the optional capability exists.
+
+        可选能力存在时重置有效后端。
+        """
         view = self._require_view(backend_id)
         reset = view.backend.reset
         if reset is None:
@@ -804,6 +1039,10 @@ class LocalBackendRegistry:
         progress: ProgressCallback | None = None,
         confirmation: str | None = None,
     ) -> LocalOperationResult:
+        """Run a load, unload, or download action for one exact model reference.
+
+        为一个精确模型引用运行加载、卸载或下载操作。
+        """
         view = self._require_view(backend_id)
         callback = getattr(view.backend, action)
         if callback is None:
@@ -835,6 +1074,10 @@ class LocalBackendRegistry:
         *,
         progress: ProgressCallback | None = None,
     ) -> LocalOperationResult:
+        """Search models through the effective backend with a normalized query.
+
+        使用规范化查询通过有效后端搜索模型。
+        """
         view = self._require_view(backend_id)
         callback = view.backend.search_models
         if callback is None:
@@ -863,6 +1106,10 @@ class LocalBackendRegistry:
         )
 
     def retire(self) -> None:
+        """Invalidate this generation and cancel all owned backend operations.
+
+        使此代际失效并取消所有拥有的后端操作。
+        """
         if self._retired:
             return
         self._retired = True
@@ -873,12 +1120,18 @@ class LocalBackendRegistry:
     async def aclose(self) -> None:
         """Retire the generation and boundedly drain backend operations.
 
+        退役此代际并在有界时间内排空后端操作。
+
         A backend is extension code and can ignore task cancellation while it
         unwinds a network client or subprocess.  Do not let final session
         cleanup hang forever: request cancellation once, wait for the fixed
         containment window, and keep a still-running task strongly reachable
         until it actually finishes.  Its context is stale, so late results are
         discarded by :meth:`_run`.
+
+        后端属于扩展代码，可能在展开网络客户端或子进程时忽略任务取消。为避免最终会话
+        清理永久挂起，只请求取消一次、等待固定容纳窗口，并让仍运行的任务保持强可达直到
+        实际完成。其上下文已过期，因此 :meth:`_run` 会丢弃迟到结果。
         """
         self.retire()
         operations = tuple(self._operations.values())
@@ -898,6 +1151,10 @@ class LocalBackendRegistry:
         secrets: Sequence[str] = (),
         confirmation: str | None = None,
     ) -> LocalOperationResult:
+        """Create, supervise, and publish one source-bound backend operation.
+
+        创建、监管并发布一个绑定来源的后端操作。
+        """
         token = view.token
         key = (token, action)
         prior = self._operations.get(key)
@@ -948,6 +1205,10 @@ class LocalBackendRegistry:
         progress_events: list[LocalProgress],
         secrets: Sequence[str],
     ) -> LocalOperationResult:
+        """Invoke a backend callback and normalize every supported result shape.
+
+        调用后端回调并规范化所有受支持的结果形态。
+        """
         try:
             value = callback(context)
             value = await value if inspect.isawaitable(value) else value
@@ -1005,6 +1266,10 @@ class LocalBackendRegistry:
         )
 
     def _require_view(self, backend_id: str) -> LocalBackendView:
+        """Return an effective backend view or raise a bounded operation error.
+
+        返回有效后端视图，或抛出有界操作错误。
+        """
         if self._retired:
             raise LocalOperationError("Local backend registry generation is retired")
         view = self.effective(backend_id)
@@ -1013,6 +1278,10 @@ class LocalBackendRegistry:
         return view
 
     def _token_is_current(self, token: LocalBackendLayerToken) -> bool:
+        """Return whether a backend layer token still belongs to this generation.
+
+        返回后端层令牌是否仍属于此代际。
+        """
         if self._retired or token.generation_id != self._generation_id:
             return False
         return any(item[0] == token for item in self._layers.get(token.backend_id, ()))
@@ -1022,6 +1291,10 @@ class LocalBackendRegistry:
         token: LocalBackendLayerToken,
         action: LocalAction | None = None,
     ) -> bool:
+        """Cancel operations owned by one exact backend layer token.
+
+        取消一个精确后端层令牌拥有的操作。
+        """
         cancelled = False
         for (operation_token, operation_action), operation in tuple(self._operations.items()):
             if operation_token == token and (action is None or operation_action == action):
@@ -1029,12 +1302,19 @@ class LocalBackendRegistry:
         return cancelled
 
     def _assert_active(self) -> None:
+        """Raise when this backend registry generation has retired.
+
+        此后端注册表代际已退役时抛出异常。
+        """
         if self._retired:
             raise LocalOperationError("Local backend registry generation is retired")
 
 
 def _request_operation_cancellation(operation: _Operation) -> bool:
-    """Signal and cancel one operation at most once."""
+    """Signal and cancel one operation at most once.
+
+    最多向一个操作发送一次信号和任务取消。
+    """
     operation.signal.cancel()
     if operation.cancellation_requested:
         return False
@@ -1045,7 +1325,10 @@ def _request_operation_cancellation(operation: _Operation) -> bool:
 
 
 async def _cancel_and_drain_operation(operation: _Operation) -> bool:
-    """Wait through one bounded cancellation window without re-cancelling."""
+    """Wait through one bounded cancellation window without re-cancelling.
+
+    在一个有界取消窗口内等待，而不重复取消。
+    """
     if operation.task.done():
         return True
     _request_operation_cancellation(operation)
@@ -1059,6 +1342,7 @@ async def _cancel_and_drain_operation(operation: _Operation) -> bool:
     except asyncio.CancelledError:
         # The cleanup owner itself was cancelled.  The task remains supervised
         # and receives no second cancellation while its backend unwinds.
+        # 清理所有者自身已被取消。任务仍受监管，并且在后端展开期间不会收到第二次取消。
         if operation.task.done():
             return True
         raise
@@ -1068,6 +1352,10 @@ async def _cancel_and_drain_operation(operation: _Operation) -> bool:
 
 
 def _release_supervised_operation(task: asyncio.Task[object]) -> None:
+    """Release a completed operation from process-owned supervision.
+
+    从进程拥有的监管中释放已完成操作。
+    """
     _SUPERVISED_LOCAL_OPERATION_TASKS.discard(task)
     with suppress(asyncio.CancelledError):
         task.exception()
@@ -1077,6 +1365,10 @@ def _validate_values(
     spec: LocalConfigureSpec,
     values: Mapping[str, str],
 ) -> tuple[LocalConfigValues, Mapping[str, str]]:
+    """Validate submitted configuration values against a backend form schema.
+
+    根据后端表单模式校验提交的配置值。
+    """
     submitted = dict(values)
     fields = {field.key: field for field in spec.fields}
     errors: dict[str, str] = {}
@@ -1096,6 +1388,10 @@ def _validate_values(
 
 
 def _record_progress(item: LocalProgress, operation: _Operation) -> None:
+    """Record progress, preserve fractional detail, and notify listeners safely.
+
+    记录进度、保留比例详情并安全通知监听器。
+    """
     operation.progress.append(item)
     operation.latest_progress = item
     if item.fraction is not None:
@@ -1103,12 +1399,16 @@ def _record_progress(item: LocalProgress, operation: _Operation) -> None:
     for callback in tuple(operation.listeners):
         # A closing or replaced host must not turn backend work into a failed
         # transaction merely because progress rendering disappeared.
+        # 关闭或被替换的宿主不应仅因进度渲染消失就使后端工作变成失败事务。
         with suppress(Exception):
             callback(item)
 
 
 async def _invoke(callback: Callable[..., object], *args: object) -> object:
-    """Invoke documented callbacks, accepting a no-context test double too."""
+    """Invoke documented callbacks, accepting a no-context test double too.
+
+    调用有文档说明的回调，同时接受不带上下文的测试替身。
+    """
     try:
         signature = inspect.signature(callback)
     except (TypeError, ValueError):
@@ -1133,6 +1433,10 @@ async def _invoke(callback: Callable[..., object], *args: object) -> object:
 
 
 def _redact(value: str | None, secrets: Sequence[str]) -> str | None:
+    """Replace every known secret in optional backend-authored text.
+
+    替换可选后端文本中的所有已知敏感值。
+    """
     if value is None:
         return None
     result = value
@@ -1143,6 +1447,10 @@ def _redact(value: str | None, secrets: Sequence[str]) -> str | None:
 
 
 def _redact_progress(item: LocalProgress, secrets: Sequence[str]) -> LocalProgress:
+    """Return a progress event with secret-bearing text redacted.
+
+    返回敏感文本已脱敏的进度事件。
+    """
     return LocalProgress(
         _redact(item.message, secrets) or "[redacted]",
         item.fraction,
@@ -1154,7 +1462,10 @@ def _safe_operation_result(
     result: LocalOperationResult,
     secrets: Sequence[str],
 ) -> LocalOperationResult:
-    """Keep backend-authored values out of host messages and diagnostics."""
+    """Keep backend-authored values out of host messages and diagnostics.
+
+    对宿主消息和诊断中的后端文本进行脱敏。
+    """
     status = result.backend_status
     if status is not None:
         status = LocalBackendStatus(
@@ -1245,6 +1556,10 @@ def _safe_operation_result(
 
 
 def _source_id(value: str) -> str:
+    """Validate and return one exact backend source identifier.
+
+    校验并返回一个精确后端来源标识符。
+    """
     _non_empty(value, "Local backend source id")
     if value != value.strip():
         raise LocalBackendError("Local backend source id must not have surrounding whitespace")
@@ -1252,11 +1567,19 @@ def _source_id(value: str) -> str:
 
 
 def _non_empty(value: str, label: str) -> None:
+    """Require a value to be a non-empty string.
+
+    要求值为非空字符串。
+    """
     if not isinstance(value, str) or not value.strip():
         raise LocalBackendError(f"{label} must be a non-empty string")
 
 
 def _identifier(value: str, label: str) -> None:
+    """Require an identifier to be non-empty without surrounding whitespace.
+
+    要求标识符非空且不含首尾空白。
+    """
     _non_empty(value, label)
     if value != value.strip():
         raise LocalBackendError(f"{label} must not have surrounding whitespace")

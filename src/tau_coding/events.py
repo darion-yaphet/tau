@@ -1,4 +1,7 @@
-"""Pi-compatible coding-session events consumed by frontends and SDK users."""
+"""Pi-compatible coding-session events consumed by frontends and SDK users.
+
+供前端和 SDK 用户使用的 Pi 兼容编码会话事件。
+"""
 
 from __future__ import annotations
 

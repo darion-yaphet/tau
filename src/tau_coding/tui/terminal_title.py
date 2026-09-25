@@ -1,4 +1,7 @@
-"""Helpers for updating the terminal window/tab title from Tau's TUI."""
+"""Helpers for updating the terminal window/tab title from Tau's TUI.
+
+从 Tau TUI 更新终端窗口或标签页标题的辅助工具。
+"""
 
 from __future__ import annotations
 
@@ -21,7 +24,10 @@ def terminal_title_supported(
     environ: Mapping[str, str] | None = None,
     stream: TextIO | None = None,
 ) -> bool:
-    """Return whether Tau should emit OSC title sequences in this process."""
+    """Return whether Tau should emit OSC title sequences in this process.
+
+    返回 Tau 是否应在此进程中发送 OSC 标题序列。
+    """
     env = os.environ if environ is None else environ
     if env.get("TAU_TERMINAL_TITLE", "").lower() in {"0", "false", "no", "off"}:
         return False
@@ -38,7 +44,10 @@ def sanitize_terminal_title(
     *,
     max_length: int = MAX_TERMINAL_TITLE_LENGTH,
 ) -> str:
-    """Strip OSC-breaking control bytes and cap terminal-title text."""
+    """Strip OSC-breaking control bytes and cap terminal-title text.
+
+    移除会破坏 OSC 的控制字节，并限制终端标题文本长度。
+    """
     if value is None:
         return ""
     sanitized = _CONTROL_CHARS_RE.sub("", value).strip()
@@ -55,7 +64,10 @@ def build_terminal_title(
     running: bool,
     frame: int = 0,
 ) -> str:
-    """Return Tau's terminal tab title for the current session/running state."""
+    """Return Tau's terminal tab title for the current session/running state.
+
+    返回当前会话和运行状态对应的 Tau 终端标签页标题。
+    """
     title = sanitize_terminal_title(session_title)
     title = (
         TAU_TITLE_MARK
@@ -68,12 +80,18 @@ def build_terminal_title(
 
 
 def osc_terminal_title_sequence(title: str) -> str:
-    """Return an OSC 0 sequence that sets the terminal window/tab title."""
+    """Return an OSC 0 sequence that sets the terminal window/tab title.
+
+    返回用于设置终端窗口或标签页标题的 OSC 0 序列。
+    """
     return f"\x1b]0;{sanitize_terminal_title(title)}{OSC_TERMINATOR}"
 
 
 class TerminalTitleController:
-    """Small stateful writer that avoids duplicate OSC title writes."""
+    """Small stateful writer that avoids duplicate OSC title writes.
+
+    避免重复写入 OSC 标题的小型有状态写入器。
+    """
 
     def __init__(
         self,
@@ -84,6 +102,10 @@ class TerminalTitleController:
         environ: Mapping[str, str] | None = None,
         exit_title: str = TAU_TITLE_MARK,
     ) -> None:
+        """Configure title support and initialize emitted-title tracking.
+
+        配置标题支持并初始化已发送标题跟踪。
+        """
         self._stream = cast(TextIO, sys.__stdout__) if stream is None else stream
         self.enabled = (
             terminal_title_supported(environ=environ, stream=self._stream)
@@ -95,7 +117,10 @@ class TerminalTitleController:
         self._exit_title = exit_title
 
     def _write(self, sequence: str) -> bool:
-        """Best-effort title write; disable future writes if the stream fails."""
+        """Best-effort title write; disable future writes if the stream fails.
+
+        尽力写入标题；如果流失败，则禁用后续写入。
+        """
         with suppress(OSError, ValueError):
             self._writer(sequence)
             return True
@@ -103,7 +128,10 @@ class TerminalTitleController:
         return False
 
     def update(self, session_title: str | None, *, running: bool, frame: int = 0) -> None:
-        """Write the current Tau title if it differs from the last emitted title."""
+        """Write the current Tau title if it differs from the last emitted title.
+
+        当前 Tau 标题与上次发送的标题不同时写入它。
+        """
         if not self.enabled:
             return
         title = build_terminal_title(session_title, running=running, frame=frame)
@@ -113,12 +141,19 @@ class TerminalTitleController:
             self._last_title = title
 
     def restore(self) -> None:
-        """Leave the terminal title in a neutral idle Tau state on shutdown."""
+        """Leave the terminal title in a neutral idle Tau state on shutdown.
+
+        关闭时将终端标题置于中性的 Tau 空闲状态。
+        """
         if not self.enabled:
             return
         if self._write(osc_terminal_title_sequence(self._exit_title)):
             self._last_title = self._exit_title
 
     def _default_write(self, sequence: str) -> None:
+        """Write and flush one OSC title sequence to the terminal stream.
+
+        向终端流写入并刷新一个 OSC 标题序列。
+        """
         self._stream.write(sequence)
         self._stream.flush()

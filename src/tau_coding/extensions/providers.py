@@ -1,4 +1,7 @@
-"""Frontend-free contracts for process-local extension providers."""
+"""Frontend-free contracts for process-local extension providers.
+
+进程本地扩展提供商的无前端契约。
+"""
 
 from __future__ import annotations
 
@@ -41,26 +44,41 @@ type ModelCompat = Mapping[str, JSONValue | ImmutableJSONValue]
 
 
 class DynamicProviderError(ValueError):
-    """Raised when a dynamic provider contract is invalid."""
+    """Raised when a dynamic provider contract is invalid.
+
+    动态提供商契约无效时抛出的异常。
+    """
 
 
 class ProviderAuthError(RuntimeError):
-    """Raised when required provider authentication cannot be resolved."""
+    """Raised when required provider authentication cannot be resolved.
+
+    无法解析所需提供商认证时抛出的异常。
+    """
 
 
 class _MissingRequiredApiKeyError(ProviderAuthError):
-    """Host-authored missing-key guidance safe to preserve at runtime boundaries."""
+    """Host-authored missing-key guidance safe to preserve at runtime boundaries.
+
+    由宿主编写、可安全保留到运行时边界的缺失密钥指引。
+    """
 
 
 class CredentialReader(Protocol):
-    """Read-only credential lookup used by dynamic auth strategies."""
+    """Read-only credential lookup used by dynamic auth strategies.
+
+    动态认证策略使用的只读凭据查询。
+    """
 
     def get(self, name: str) -> str | None: ...
 
 
 @dataclass(frozen=True, slots=True)
 class ProviderAuthContext:
-    """Secret-bearing inputs available only while resolving provider auth."""
+    """Secret-bearing inputs available only while resolving provider auth.
+
+    仅在解析提供商认证时可用的含密输入。
+    """
 
     credentials: CredentialReader = field(repr=False)
     environment: Mapping[str, str] = field(repr=False)
@@ -70,8 +88,12 @@ class ProviderAuthContext:
 class ResolvedProviderAuth:
     """Authentication resolved immediately before refresh or runtime creation.
 
+    在刷新或创建运行时之前即时解析的认证信息。
+
     Secret-bearing fields are deliberately omitted from ``repr``. This value is
     runtime-only and has no serialization helper.
+
+    含密字段会特意从 ``repr`` 中省略。此值仅用于运行时，并且没有序列化辅助方法。
     """
 
     api_key: str | None = field(default=None, repr=False)
@@ -98,14 +120,20 @@ class ResolvedProviderAuth:
 
 
 class ProviderAuth(Protocol):
-    """Resolve dynamic provider authentication without persisting it."""
+    """Resolve dynamic provider authentication without persisting it.
+
+    解析动态提供商认证而不持久化它。
+    """
 
     async def resolve(self, context: ProviderAuthContext) -> ResolvedProviderAuth: ...
 
 
 @dataclass(frozen=True, slots=True)
 class RequiredApiKey:
-    """Resolve a required API key from Tau credentials, then the environment."""
+    """Resolve a required API key from Tau credentials, then the environment.
+
+    先从 Tau 凭据、再从环境中解析必需的 API 密钥。
+    """
 
     credential_name: str
     env_var: str
@@ -137,7 +165,10 @@ class RequiredApiKey:
 
 @dataclass(frozen=True, slots=True)
 class OptionalApiKey:
-    """Resolve an optional API key, omitting Authorization when absent."""
+    """Resolve an optional API key, omitting Authorization when absent.
+
+    解析可选 API 密钥，缺失时省略 Authorization。
+    """
 
     credential_name: str
     env_var: str
@@ -166,7 +197,10 @@ class OptionalApiKey:
 
 @dataclass(frozen=True, slots=True)
 class NoAuth:
-    """Authentication strategy that never reads credentials or environment."""
+    """Authentication strategy that never reads credentials or environment.
+
+    从不读取凭据或环境的认证策略。
+    """
 
     async def resolve(self, context: ProviderAuthContext) -> ResolvedProviderAuth:
         del context
@@ -177,8 +211,13 @@ class NoAuth:
 class ProviderModel:
     """One model in a complete dynamic provider snapshot.
 
+    完整动态提供者快照中的一个模型。
+
     Unknown metadata remains ``None``. Runtime headers are never represented in
     ``repr`` and this type intentionally has no generic persistence method.
+
+    未知元数据保持为 ``None``。运行时请求头不会显示在 ``repr`` 中，并且此类型
+    有意不提供通用持久化方法。
     """
 
     id: str
@@ -230,7 +269,10 @@ class ProviderModel:
 
 @dataclass(frozen=True, slots=True)
 class ProviderModelSnapshot:
-    """Complete atomic candidate model snapshot returned by discovery."""
+    """Complete atomic candidate model snapshot returned by discovery.
+
+    发现流程返回的完整原子候选模型快照。
+    """
 
     models: tuple[ProviderModel, ...] = ()
     default_model: str | None = None
@@ -243,9 +285,14 @@ class ProviderModelSnapshot:
 class OpenAICompatibleTransport:
     """Descriptor for Tau's existing OpenAI-compatible streaming transport.
 
+    Tau 现有 OpenAI 兼容流式传输的描述信息。
+
     ``client`` is an optional externally owned client seam for trusted adapters
     and deterministic tests. Providers never close it; the caller owns its
     lifetime. Normal transports leave it unset and use Tau's standard client.
+
+    ``client`` 是供可信适配器和确定性测试使用的可选外部客户端接口。提供者不会关闭
+    该客户端，其生命周期由调用方负责。常规传输不设置此字段，而使用 Tau 的标准客户端。
     """
 
     base_url: str
@@ -292,14 +339,20 @@ class OpenAICompatibleTransport:
 
 @dataclass(frozen=True, slots=True)
 class ProviderRuntimeContext:
-    """Frontend-independent inputs passed to a custom runtime factory."""
+    """Frontend-independent inputs passed to a custom runtime factory.
+
+    传递给自定义运行时工厂且与前端无关的输入。
+    """
 
     provider_id: str
     auth: ResolvedProviderAuth = field(repr=False)
 
 
 class ClosableModelProvider(ModelProvider, Protocol):
-    """Runtime provider returned by a dynamic provider factory."""
+    """Runtime provider returned by a dynamic provider factory.
+
+    动态提供者工厂返回的运行时模型提供者。
+    """
 
     async def aclose(self) -> None: ...
 
@@ -312,7 +365,10 @@ RuntimeFactory = Callable[
 
 @dataclass(frozen=True, slots=True)
 class ProviderRefreshContext:
-    """Inputs for one bounded, generation-owned discovery operation."""
+    """Inputs for one bounded, generation-owned discovery operation.
+
+    一次有界且由特定代际拥有的发现操作所需输入。
+    """
 
     signal: CancellationToken
     allow_network: bool
@@ -327,12 +383,19 @@ RefreshModels = Callable[[ProviderRefreshContext], Awaitable[ProviderModelSnapsh
 class DynamicProvider:
     """A complete process-local provider definition owned by one source layer.
 
+    由一个来源层拥有的完整进程内提供者定义。
+
     ``stable_scoped_references`` is an opt-in reserved for trusted built-in
     providers with a stable identity: it lets the host persist scoped-model
     references as ``provider id + exact model id`` pairs only.  Definitions,
     endpoints, credentials, and discovered metadata are never persisted, and
     references resolve only while this trusted source is loaded and its live
     or safely cached snapshot contains the model.
+
+    ``stable_scoped_references`` 是一项选择性启用能力，仅保留给身份稳定的可信内置提供者：
+    它允许宿主只持久化“提供者 ID + 精确模型 ID”形式的限定模型引用。定义、端点、凭据和
+    发现的元数据都不会持久化；只有在该可信来源已加载且其实时或安全缓存的快照包含模型时，
+    引用才会解析成功。
     """
 
     id: str
@@ -377,13 +440,19 @@ class DynamicProvider:
 
     @property
     def auth(self) -> ProviderAuth:
-        """Return the auth strategy for refresh and runtime creation."""
+        """Return the auth strategy for refresh and runtime creation.
+
+        返回用于刷新和创建运行时的认证策略。
+        """
         if self.transport is not None:
             return self.transport.auth
         return self.runtime_auth
 
     def with_snapshot(self, snapshot: ProviderModelSnapshot) -> DynamicProvider:
-        """Return this definition with one validated complete snapshot."""
+        """Return this definition with one validated complete snapshot.
+
+        返回应用一个经过验证的完整快照后的提供者定义。
+        """
         return DynamicProvider(
             id=self.id,
             display_name=self.display_name,
@@ -403,7 +472,10 @@ async def resolve_provider_auth(
     credentials: CredentialReader,
     environment: Mapping[str, str],
 ) -> ResolvedProviderAuth:
-    """Resolve one auth strategy and validate its runtime-only result."""
+    """Resolve one auth strategy and validate its runtime-only result.
+
+    解析一种认证策略，并验证仅用于运行时的结果。
+    """
     resolved = auth.resolve(ProviderAuthContext(credentials=credentials, environment=environment))
     value = await resolved if isawaitable(resolved) else resolved
     if not isinstance(value, ResolvedProviderAuth):
@@ -487,7 +559,10 @@ def _cost_mapping(value: Mapping[str, float]) -> Mapping[str, float]:
 
 
 def json_compatible_mapping(value: ModelCompat) -> dict[str, JSONValue]:
-    """Return a mutable JSON-compatible copy of deeply frozen metadata."""
+    """Return a mutable JSON-compatible copy of deeply frozen metadata.
+
+    返回深度冻结元数据的可变 JSON 兼容副本。
+    """
     return {key: _copy_mutable_json(item) for key, item in value.items()}
 
 

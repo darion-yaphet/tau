@@ -1,4 +1,7 @@
-"""Human-readable Pi-compatible streaming transcript renderer."""
+"""Human-readable Pi-compatible streaming transcript renderer.
+
+便于阅读且兼容 Pi 的流式记录渲染器。
+"""
 
 import typer
 from rich.console import Console
@@ -26,6 +29,10 @@ class TranscriptRenderer:
         custom_message_renderer: CustomMessageMarkup | None = None,
         **_: object,
     ) -> None:
+        """Configure transcript detail and initialize streaming state.
+
+        配置记录详细程度并初始化流式状态。
+        """
         self._assistant_started = False
         self._assistant_ended = False
         self._failed = False
@@ -33,6 +40,10 @@ class TranscriptRenderer:
         self._custom_message_renderer = custom_message_renderer
 
     def render(self, event: CodingSessionEvent) -> None:
+        """Render one session event into a readable streaming transcript.
+
+        将一个会话事件渲染为易读的流式记录。
+        """
         if isinstance(event, MessageUpdateEvent):
             nested = event.assistant_message_event
             if isinstance(nested, TextDeltaEvent):
@@ -90,9 +101,17 @@ class TranscriptRenderer:
             self._newline(final=True)
 
     def finish(self) -> bool:
+        """Finish the transcript and return whether the session succeeded.
+
+        完成记录并返回会话是否成功。
+        """
         return not self._failed
 
     def _newline(self, *, final: bool = False) -> None:
+        """Terminate the active output line when needed.
+
+        在需要时结束当前输出行。
+        """
         if self._assistant_started and not self._assistant_ended:
             typer.echo()
             self._assistant_ended = True

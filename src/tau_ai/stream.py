@@ -1,4 +1,7 @@
-"""Translate Tau's transitional provider parser output into Pi stream events."""
+"""Translate Tau's transitional provider parser output into Pi stream events.
+
+将 Tau 过渡期提供商解析器的输出转换为 Pi 流事件。
+"""
 
 from __future__ import annotations
 
@@ -37,6 +40,9 @@ from tau_ai.events import (
 )
 
 
+# Create an isolated deep copy for an emitted partial-message snapshot.
+
+# 创建隔离的深拷贝，作为已发出的部分消息快照。
 def _snapshot(message: AssistantMessage) -> AssistantMessage:
     return message.model_copy(deep=True)
 
@@ -45,7 +51,10 @@ async def _end_active_block(
     partial: AssistantMessage,
     index: int | None,
 ) -> AsyncIterator[AssistantMessageEvent]:
-    """End the active text/thinking block before the provider changes channels."""
+    """End the active text/thinking block before the provider changes channels.
+
+    在提供商切换通道前结束当前文本或思考内容块。
+    """
     if index is None:
         return
     block = partial.content[index]
@@ -64,7 +73,10 @@ async def _end_active_block(
 
 
 def _copy_replay_metadata(target: AssistantMessage, source: AssistantMessage) -> None:
-    """Copy provider metadata onto streamed blocks without changing their order."""
+    """Copy provider metadata onto streamed blocks without changing their order.
+
+    将提供商元数据复制到流式内容块，同时保持其顺序不变。
+    """
     source_thinking = [block for block in source.content if isinstance(block, ThinkingContent)]
     target_thinking = [block for block in target.content if isinstance(block, ThinkingContent)]
     for target_block, source_block in zip(target_thinking, source_thinking, strict=False):
@@ -77,6 +89,9 @@ def _copy_replay_metadata(target: AssistantMessage, source: AssistantMessage) ->
         target_text_block.text_signature = source_text_block.text_signature
 
 
+# Normalize provider finish reasons to Tau's public stop-reason values.
+
+# 将提供商的结束原因规范化为 Tau 公开的停止原因值。
 def _finish_reason(value: str | None, *, has_tools: bool) -> str:
     if has_tools or value in {"tool_calls", "tool_use", "toolUse"}:
         return "toolUse"
@@ -95,10 +110,16 @@ async def canonicalize_provider_stream(
 ) -> AsyncIterator[AssistantMessageEvent]:
     """Canonicalize one old internal parser stream.
 
+    规范化一条旧版内部解析器事件流。
+
     Provider parsers remain isolated behind this private bridge while they are
     migrated incrementally. The public provider protocol exposes only Pi events.
     Chat Completions uses independent channels: a channel switch does not end
     either block. Other transports preserve their sequential block ordering.
+
+    在逐步迁移期间，提供商解析器仍隔离在这个私有桥接层之后。公开的提供商
+    协议只暴露 Pi 事件。Chat Completions 使用独立通道：切换通道不会结束
+    任一内容块。其他传输方式保持其顺序内容块排列。
     """
     partial = AssistantMessage(api=api, provider=provider, model=model)
     active_index: int | None = None
@@ -110,6 +131,8 @@ async def canonicalize_provider_stream(
     async for event in source:
         if isinstance(event, ProviderRetryEvent):
             # Retries are provider-internal at the Pi AI boundary.
+
+            # 在 Pi AI 边界上，重试属于提供商内部行为。
             continue
         if isinstance(event, ProviderResponseStartEvent):
             if event.response_provider is not None:
@@ -196,6 +219,9 @@ async def canonicalize_provider_stream(
 
             # Preserve the exact streamed content order. The parser's final
             # message remains authoritative only for response metadata/usage.
+
+            # 保持流式内容的准确顺序。解析器的最终消息仅作为响应元数据和
+            # 用量信息的权威来源。
             final = event.message.model_copy(deep=True)
             final.api = api
             final.provider = provider

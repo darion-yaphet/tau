@@ -1,4 +1,7 @@
-"""Durable provider configuration for Tau coding sessions."""
+"""Durable provider configuration for Tau coding sessions.
+
+Tau 编码会话的持久化提供商配置。
+"""
 
 from __future__ import annotations
 
@@ -56,18 +59,30 @@ PROVIDER_SETTINGS_SCHEMA_VERSION = 2
 
 
 class ProviderConfigError(ValueError):
-    """Raised when Tau provider configuration is invalid."""
+    """Raised when Tau provider configuration is invalid.
+
+    当 Tau 提供商配置无效时抛出。
+    """
 
 
 class CredentialReader(Protocol):
-    """Credential lookup used while building runtime provider config."""
+    """Credential lookup used while building runtime provider config.
 
+    构建运行时提供商配置时使用的凭据查询接口。
+    """
+
+    # Return the stored credential value for a name when available.
+
+    # 返回指定名称对应的已存储凭据值；不存在时返回空值。
     def get(self, name: str) -> str | None: ...
 
 
 @dataclass(frozen=True, slots=True)
 class ProviderModelMetadata:
-    """Runtime metadata for one configured model."""
+    """Runtime metadata for one configured model.
+
+    单个已配置模型的运行时元数据。
+    """
 
     name: str | None = None
     api: ProviderApi | None = None
@@ -83,7 +98,10 @@ class ProviderModelMetadata:
     thinking_level_map: dict[ThinkingLevel, str | None] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize this model metadata to JSON-compatible data."""
+        """Serialize this model metadata to JSON-compatible data.
+
+        将此模型元数据序列化为 JSON 兼容数据。
+        """
         return {
             "name": self.name,
             "api": self.api,
@@ -112,7 +130,10 @@ class ProviderModelMetadata:
 
 @dataclass(frozen=True, slots=True)
 class OpenAICompatibleProviderConfig:
-    """Durable settings for one OpenAI-compatible provider."""
+    """Durable settings for one OpenAI-compatible provider.
+
+    单个 OpenAI 兼容提供商的持久化设置。
+    """
 
     name: str
     base_url: str = DEFAULT_OPENAI_COMPATIBLE_BASE_URL
@@ -136,6 +157,10 @@ class OpenAICompatibleProviderConfig:
     inference_providers: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Validate numeric, metadata, compatibility, and thinking settings.
+
+        校验数值、模型元数据、兼容性和思考模式设置。
+        """
         _validate_provider_numbers(
             timeout_seconds=self.timeout_seconds,
             max_retries=self.max_retries,
@@ -154,7 +179,10 @@ class OpenAICompatibleProviderConfig:
         _validate_inference_providers(self.name, self.models, self.inference_providers)
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize this provider config to JSON-compatible data."""
+        """Serialize this provider config to JSON-compatible data.
+
+        将此提供商配置序列化为 JSON 兼容数据。
+        """
         return {
             "name": self.name,
             "type": "openai-compatible",
@@ -186,7 +214,10 @@ class OpenAICompatibleProviderConfig:
 
 @dataclass(frozen=True, slots=True)
 class AnthropicProviderConfig:
-    """Durable settings for Anthropic's Messages API."""
+    """Durable settings for Anthropic's Messages API.
+
+    Anthropic Messages API 的持久化设置。
+    """
 
     name: str = "anthropic"
     base_url: str = DEFAULT_ANTHROPIC_BASE_URL
@@ -209,6 +240,10 @@ class AnthropicProviderConfig:
     thinking_defaults: dict[str, ThinkingLevel] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Validate Anthropic provider values and thinking preferences.
+
+        校验 Anthropic 提供商参数和思考模式偏好。
+        """
         _validate_provider_numbers(
             timeout_seconds=self.timeout_seconds,
             max_retries=self.max_retries,
@@ -226,7 +261,10 @@ class AnthropicProviderConfig:
         _validate_thinking_defaults(self.thinking_defaults)
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize this provider config to JSON-compatible data."""
+        """Serialize this provider config to JSON-compatible data.
+
+        将此提供商配置序列化为 JSON 兼容数据。
+        """
         return {
             "name": self.name,
             "type": "anthropic",
@@ -257,7 +295,10 @@ class AnthropicProviderConfig:
 
 @dataclass(frozen=True, slots=True)
 class OpenAICodexProviderConfig:
-    """Durable settings for OpenAI Codex subscription OAuth."""
+    """Durable settings for OpenAI Codex subscription OAuth.
+
+    OpenAI Codex 订阅 OAuth 的持久化设置。
+    """
 
     name: str = "openai-codex"
     base_url: str = DEFAULT_OPENAI_CODEX_BASE_URL
@@ -285,6 +326,10 @@ class OpenAICodexProviderConfig:
     thinking_defaults: dict[str, ThinkingLevel] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Validate Codex provider values, metadata, and thinking preferences.
+
+        校验 Codex 提供商参数、模型元数据和思考模式偏好。
+        """
         _validate_provider_numbers(
             timeout_seconds=self.timeout_seconds,
             max_retries=self.max_retries,
@@ -301,7 +346,10 @@ class OpenAICodexProviderConfig:
         _validate_thinking_defaults(self.thinking_defaults)
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize this provider config to JSON-compatible data."""
+        """Serialize this provider config to JSON-compatible data.
+
+        将此提供商配置序列化为 JSON 兼容数据。
+        """
         return {
             "name": self.name,
             "type": "openai-codex",
@@ -335,19 +383,28 @@ type ProviderConfig = (
 
 @dataclass(frozen=True, slots=True)
 class ScopedModelConfig:
-    """A provider/model pair enabled for quick model cycling."""
+    """A provider/model pair enabled for quick model cycling.
+
+    可用于快速轮换模型的提供商与模型组合。
+    """
 
     provider: str
     model: str
 
     def to_json(self) -> dict[str, str]:
-        """Serialize this scoped model reference."""
+        """Serialize this scoped model reference.
+
+        序列化此限定范围的模型引用。
+        """
         return {"provider": self.provider, "model": self.model}
 
 
 @dataclass(frozen=True, slots=True)
 class ProviderSettings:
-    """Tau provider settings loaded from Tau home."""
+    """Tau provider settings loaded from Tau home.
+
+    从 Tau 主目录加载的提供商设置。
+    """
 
     default_provider: str = DEFAULT_PROVIDER_NAME
     providers: tuple[ProviderConfig, ...] = field(
@@ -356,7 +413,10 @@ class ProviderSettings:
     scoped_models: tuple[ScopedModelConfig, ...] = ()
 
     def get_provider(self, name: str | None = None) -> ProviderConfig:
-        """Return a configured provider by name."""
+        """Return a configured provider by name.
+
+        按名称返回已配置的提供商。
+        """
         target = name or self.default_provider
         for provider in self.providers:
             if provider.name == target:
@@ -364,7 +424,10 @@ class ProviderSettings:
         raise ProviderConfigError(f"Unknown provider: {target}")
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize runtime preferences to JSON-compatible data."""
+        """Serialize runtime preferences to JSON-compatible data.
+
+        将运行时偏好序列化为 JSON 兼容数据。
+        """
         return {
             "schema_version": PROVIDER_SETTINGS_SCHEMA_VERSION,
             "default_provider": self.default_provider,
@@ -377,21 +440,30 @@ class ProviderSettings:
 
 @dataclass(frozen=True, slots=True)
 class ProviderSelection:
-    """Resolved provider/model selection for a Tau run."""
+    """Resolved provider/model selection for a Tau run.
+
+    为一次 Tau 运行解析出的提供商与模型选择。
+    """
 
     provider: ProviderConfig
     model: str
 
 
 def builtin_provider_configs() -> tuple[ProviderConfig, ...]:
-    """Return Tau's built-in provider configs."""
+    """Return Tau's built-in provider configs.
+
+    返回 Tau 的内置提供商配置。
+    """
     return tuple(
         provider_config_from_catalog_entry(entry.name) for entry in BUILTIN_PROVIDER_CATALOG
     )
 
 
 def provider_config_from_catalog_entry(name: str) -> ProviderConfig:
-    """Create a durable provider config from a built-in catalog entry."""
+    """Create a durable provider config from a built-in catalog entry.
+
+    根据内置目录条目创建持久化提供商配置。
+    """
     for entry in BUILTIN_PROVIDER_CATALOG:
         if entry.name == name:
             return provider_config_from_entry(entry)
@@ -399,7 +471,15 @@ def provider_config_from_catalog_entry(name: str) -> ProviderConfig:
 
 
 def provider_config_from_entry(entry: ProviderCatalogEntry) -> ProviderConfig:
-    """Create a durable provider config from a catalog entry."""
+    """Create a durable provider config from a catalog entry.
+
+    根据目录条目创建持久化提供商配置。
+    """
+    # Core flow: normalize shared catalog metadata, then select the durable
+    # configuration class whose runtime protocol matches the provider kind.
+
+    # 核心流程：先规范化共享目录元数据，再按提供商类型选择与运行时协议匹配的
+    # 持久化配置类。
     context_windows = dict(entry.context_windows or {})
     model_metadata = _provider_model_metadata_from_catalog(entry.model_metadata)
     if entry.kind == "anthropic":
@@ -459,6 +539,10 @@ def provider_config_from_entry(entry: ProviderCatalogEntry) -> ProviderConfig:
 
 
 def _default_api_for_kind(kind: str) -> ProviderApi:
+    """Return the default wire API associated with a provider kind.
+
+    返回与提供商类型对应的默认通信 API。
+    """
     if kind == "anthropic":
         return "anthropic-messages"
     if kind == "openai-codex":
@@ -473,6 +557,10 @@ def _default_api_for_kind(kind: str) -> ProviderApi:
 def _provider_model_metadata_from_catalog(
     model_metadata: dict[str, ModelCatalogMetadata],
 ) -> dict[str, ProviderModelMetadata]:
+    """Convert catalog model metadata into runtime provider metadata.
+
+    将目录模型元数据转换为运行时提供商元数据。
+    """
     return {
         model: ProviderModelMetadata(
             name=metadata.name,
@@ -493,7 +581,10 @@ def _provider_model_metadata_from_catalog(
 
 
 def default_openai_provider_config() -> OpenAICompatibleProviderConfig:
-    """Return Tau's default OpenAI-compatible provider entry."""
+    """Return Tau's default OpenAI-compatible provider entry.
+
+    返回 Tau 默认的 OpenAI 兼容提供商条目。
+    """
     provider = provider_config_from_catalog_entry(DEFAULT_PROVIDER_NAME)
     if not isinstance(provider, OpenAICompatibleProviderConfig):
         raise AssertionError("default OpenAI provider must be OpenAI-compatible")
@@ -501,12 +592,22 @@ def default_openai_provider_config() -> OpenAICompatibleProviderConfig:
 
 
 def provider_settings_path(paths: TauPaths | None = None) -> Path:
-    """Return the durable provider settings path."""
+    """Return the durable provider settings path.
+
+    返回持久化提供商设置文件的路径。
+    """
     return (paths or TauPaths()).home / "providers.json"
 
 
 def load_provider_settings(paths: TauPaths | None = None) -> ProviderSettings:
-    """Load durable provider settings, falling back to env-compatible defaults."""
+    """Load durable provider settings, falling back to env-compatible defaults.
+
+    加载持久化提供商设置；若文件不存在，则回退到与环境变量兼容的默认值。
+    """
+    # Core flow: load preferences, migrate the legacy full-definition shape when
+    # needed, then merge preferences with the current effective catalog.
+
+    # 核心流程：加载偏好，按需迁移旧版完整定义结构，再将偏好与当前有效目录合并。
     resolved_paths = paths or TauPaths()
     path = provider_settings_path(resolved_paths)
     if not path.exists():
@@ -523,7 +624,15 @@ def load_provider_settings(paths: TauPaths | None = None) -> ProviderSettings:
 
 
 def save_provider_settings(settings: ProviderSettings, paths: TauPaths | None = None) -> Path:
-    """Write durable provider preferences and return the path."""
+    """Write durable provider preferences and return the path.
+
+    写入持久化提供商偏好并返回文件路径。
+    """
+    # Core flow: move custom definitions into catalog.toml, then atomically write
+    # the runtime-only preferences to providers.json with a recovery backup.
+
+    # 核心流程：先将自定义定义写入 catalog.toml，再保留恢复备份并将仅运行时偏好
+    # 原子写入 providers.json。
     resolved_paths = paths or TauPaths()
     _save_provider_definitions_to_catalog(settings, paths=resolved_paths)
     path = provider_settings_path(resolved_paths)
@@ -539,7 +648,10 @@ def save_default_provider_model(
     paths: TauPaths | None = None,
     fallback_settings: ProviderSettings | None = None,
 ) -> ProviderSettings:
-    """Reload settings, persist one default provider/model change, and return them."""
+    """Reload settings, persist one default provider/model change, and return them.
+
+    重新加载设置，持久化一次默认提供商与模型变更，并返回更新后的设置。
+    """
     settings = _load_provider_settings_for_write(paths, fallback_settings=fallback_settings)
     updated = set_default_provider_model(settings, provider_name=provider_name, model=model)
     save_provider_settings(updated, paths)
@@ -554,7 +666,10 @@ def save_provider_thinking_level(
     paths: TauPaths | None = None,
     fallback_settings: ProviderSettings | None = None,
 ) -> ProviderSettings:
-    """Reload settings, persist one provider/model thinking preference, and return them."""
+    """Reload settings, persist one provider/model thinking preference, and return them.
+
+    重新加载设置，持久化某个提供商与模型的思考偏好，并返回更新后的设置。
+    """
     settings = _load_provider_settings_for_write(paths, fallback_settings=fallback_settings)
     updated = set_provider_thinking_level(
         settings,
@@ -575,9 +690,14 @@ def toggle_saved_stable_scoped_model(
 ) -> ProviderSettings:
     """Toggle an already-authorized stable reference without saving a definition.
 
+    切换已获授权的稳定引用，而不保存提供商定义。
+
     Callers must restrict this path to trusted built-in dynamic providers.  The
     durable value is only the exact provider/model pair; availability continues
     to come from the process-local provider snapshot.
+
+    调用方必须将此路径限制为可信的内置动态提供商。持久化内容仅为精确的
+    提供商与模型组合；可用性仍由进程内的提供商快照决定。
     """
     settings = _load_provider_settings_for_write(paths, fallback_settings=fallback_settings)
     target = ScopedModelConfig(provider=provider_name, model=model)
@@ -598,7 +718,10 @@ def toggle_saved_scoped_model(
     paths: TauPaths | None = None,
     fallback_settings: ProviderSettings | None = None,
 ) -> ProviderSettings:
-    """Reload settings, toggle one scoped model, persist them, and return them."""
+    """Reload settings, toggle one scoped model, persist them, and return them.
+
+    重新加载设置，切换一个限定范围的模型，持久化并返回更新后的设置。
+    """
     settings = _load_provider_settings_for_write(paths, fallback_settings=fallback_settings)
     provider = settings.get_provider(provider_name)
     if model not in provider.models:
@@ -622,7 +745,10 @@ def upsert_saved_provider(
     paths: TauPaths | None = None,
     fallback_settings: ProviderSettings | None = None,
 ) -> ProviderSettings:
-    """Reload settings, upsert one provider entry, persist them, and return them."""
+    """Reload settings, upsert one provider entry, persist them, and return them.
+
+    重新加载设置，插入或更新一个提供商条目，持久化并返回更新后的设置。
+    """
     settings = _load_provider_settings_for_write(paths, fallback_settings=fallback_settings)
     updated = upsert_provider(settings, provider, set_default=set_default)
     save_provider_settings(updated, paths)
@@ -634,7 +760,10 @@ def _load_provider_settings_for_write(
     *,
     fallback_settings: ProviderSettings | None = None,
 ) -> ProviderSettings:
-    """Load the latest on-disk settings, falling back only when no file exists."""
+    """Load the latest on-disk settings, falling back only when no file exists.
+
+    加载磁盘上的最新设置，仅在文件不存在时使用回退设置。
+    """
     resolved_paths = paths or TauPaths()
     if provider_settings_path(resolved_paths).exists():
         return load_provider_settings(resolved_paths)
@@ -649,7 +778,10 @@ def set_default_provider_model(
     provider_name: str,
     model: str,
 ) -> ProviderSettings:
-    """Return settings with the default provider/model preference updated."""
+    """Return settings with the default provider/model preference updated.
+
+    返回已更新默认提供商与模型偏好的设置。
+    """
     provider = settings.get_provider(provider_name)
     validate_provider_model(provider, model)
     updated_provider = replace(provider, default_model=model)
@@ -670,7 +802,10 @@ def set_provider_thinking_level(
     model: str,
     thinking_level: ThinkingLevel,
 ) -> ProviderSettings:
-    """Return settings with a remembered thinking level for one provider/model."""
+    """Return settings with a remembered thinking level for one provider/model.
+
+    返回已记录某个提供商与模型思考级别的设置。
+    """
     provider = settings.get_provider(provider_name)
     validate_provider_model(provider, model)
     normalized = normalize_thinking_level(thinking_level)
@@ -701,7 +836,10 @@ def upsert_openai_compatible_provider(
     *,
     set_default: bool = False,
 ) -> ProviderSettings:
-    """Return settings with an OpenAI-compatible provider added or replaced."""
+    """Return settings with an OpenAI-compatible provider added or replaced.
+
+    返回已新增或替换 OpenAI 兼容提供商的设置。
+    """
     return upsert_provider(settings, provider, set_default=set_default)
 
 
@@ -711,7 +849,10 @@ def upsert_provider(
     *,
     set_default: bool = False,
 ) -> ProviderSettings:
-    """Return settings with a provider added or replaced."""
+    """Return settings with a provider added or replaced.
+
+    返回已新增或替换提供商的设置。
+    """
     providers_by_name = {item.name: item for item in settings.providers}
     builtin_names = {entry.name for entry in BUILTIN_PROVIDER_CATALOG}
     if provider.name in providers_by_name and provider.name in builtin_names:
@@ -733,7 +874,10 @@ def _with_builtin_catalog_models(
     *,
     paths: TauPaths | None = None,
 ) -> ProviderSettings:
-    """Return settings with the current provider catalog merged in."""
+    """Return settings with the current provider catalog merged in.
+
+    返回已合并当前提供商目录的设置。
+    """
     catalog_configs = {config.name: config for config in _effective_provider_configs(paths)}
     providers = tuple(
         _merge_provider_config(provider, catalog_configs[provider.name])
@@ -759,10 +903,15 @@ def _migrate_legacy_provider_settings(
 ) -> ProviderSettings:
     """Move legacy full provider records onto catalog-owned definitions.
 
+    将旧版完整提供商记录迁移到由目录维护的定义上。
+
     Built-in and user-catalog provider capabilities come exclusively from the
     current effective catalog. Legacy records contribute only runtime
     preferences. Providers absent from the catalog remain intact so the
     migration can persist them as custom catalog entries.
+
+    内置目录和用户目录中的提供商能力完全来自当前有效目录。旧版记录只贡献运行时
+    偏好。目录中不存在的提供商保持原样，以便迁移过程将其保存为自定义目录条目。
     """
     catalog_configs = {config.name: config for config in _effective_provider_configs(paths)}
     providers: list[ProviderConfig] = []
@@ -801,7 +950,10 @@ def _migrate_legacy_provider_settings(
 
 
 def _save_migrated_provider_settings(settings: ProviderSettings, *, paths: TauPaths) -> None:
-    """Persist one legacy migration after creating its required recovery backup."""
+    """Persist one legacy migration after creating its required recovery backup.
+
+    创建所需的恢复备份后，持久化一次旧版设置迁移。
+    """
     path = provider_settings_path(paths)
     _backup_provider_settings(path, strict=True)
     catalog_names = {entry.name for entry in effective_catalog(paths)}
@@ -816,7 +968,10 @@ def _save_migrated_provider_settings(settings: ProviderSettings, *, paths: TauPa
 
 
 def _backup_provider_settings(path: Path, *, strict: bool) -> None:
-    """Copy existing settings to the recovery path, optionally requiring success."""
+    """Copy existing settings to the recovery path, optionally requiring success.
+
+    将现有设置复制到恢复路径，并可选择要求复制必须成功。
+    """
     if not path.exists():
         return
     if strict:
@@ -832,7 +987,10 @@ def _write_provider_settings(
     path: Path,
     backup: bool,
 ) -> None:
-    """Atomically write preferences, optionally retaining the previous file."""
+    """Atomically write preferences, optionally retaining the previous file.
+
+    以原子方式写入偏好，并可选择保留原文件备份。
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     if backup:
         _backup_provider_settings(path, strict=False)
@@ -840,7 +998,10 @@ def _write_provider_settings(
 
 
 def _effective_provider_configs(paths: TauPaths | None = None) -> tuple[ProviderConfig, ...]:
-    """Return provider configs for the effective catalog (builtin + user overlay)."""
+    """Return provider configs for the effective catalog (builtin + user overlay).
+
+    返回有效目录（内置目录加用户覆盖层）对应的提供商配置。
+    """
     return tuple(provider_config_from_entry(entry) for entry in effective_catalog(paths))
 
 
@@ -850,7 +1011,10 @@ def _append_catalog_providers(
     *,
     paths: TauPaths | None,
 ) -> tuple[ProviderConfig, ...]:
-    """Append catalog providers: user-catalog ones always, builtins when credentialed."""
+    """Append catalog providers: user-catalog ones always, builtins when credentialed.
+
+    追加目录提供商：始终追加用户目录项，仅在有凭据时追加内置项。
+    """
     credential_store = FileCredentialStore(credentials_path(paths) if paths else None)
     builtin_names = {entry.name for entry in BUILTIN_PROVIDER_CATALOG}
     provider_names = {provider.name for provider in providers}
@@ -867,7 +1031,10 @@ def _append_catalog_providers(
 
 
 def _merge_provider_config(existing: ProviderConfig, incoming: ProviderConfig) -> ProviderConfig:
-    """Merge a replacement provider config without losing local customizations."""
+    """Merge a replacement provider config without losing local customizations.
+
+    合并替换用的提供商配置，同时保留本地自定义内容。
+    """
     if type(existing) is not type(incoming):
         return incoming
 
@@ -930,6 +1097,10 @@ def _merge_openai_compatible_provider(
     existing: OpenAICompatibleProviderConfig,
     incoming: OpenAICompatibleProviderConfig,
 ) -> OpenAICompatibleProviderConfig:
+    """Merge an OpenAI-compatible catalog update with local runtime preferences.
+
+    合并 OpenAI 兼容目录更新与本地运行时偏好。
+    """
     models = _unique_strings((*incoming.models, *existing.models))
     return replace(
         incoming,
@@ -976,6 +1147,10 @@ def _merge_anthropic_provider(
     existing: AnthropicProviderConfig,
     incoming: AnthropicProviderConfig,
 ) -> AnthropicProviderConfig:
+    """Merge an Anthropic catalog update with local runtime preferences.
+
+    合并 Anthropic 目录更新与本地运行时偏好。
+    """
     models = _unique_strings((*incoming.models, *existing.models))
     return replace(
         incoming,
@@ -1021,6 +1196,10 @@ def _merge_provider_model_metadata(
     incoming: dict[str, ProviderModelMetadata],
     existing: dict[str, ProviderModelMetadata],
 ) -> dict[str, ProviderModelMetadata]:
+    """Merge incoming model metadata while retaining existing overrides.
+
+    合并传入的模型元数据，同时保留现有覆盖值。
+    """
     merged = dict(incoming)
     for model, metadata in existing.items():
         if model not in merged:
@@ -1046,12 +1225,18 @@ def _merge_provider_model_metadata(
 
 
 def _unique_strings(values: tuple[str, ...]) -> tuple[str, ...]:
-    """Return values with duplicates removed while preserving order."""
+    """Return values with duplicates removed while preserving order.
+
+    返回去重且保持原有顺序的字符串值。
+    """
     return tuple(dict.fromkeys(values))
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
-    """Write text through a sibling temp file and atomically replace the target."""
+    """Write text through a sibling temp file and atomically replace the target.
+
+    通过同目录临时文件写入文本，并以原子方式替换目标文件。
+    """
     temp_path: Path | None = None
     try:
         with NamedTemporaryFile(
@@ -1074,7 +1259,10 @@ def _atomic_write_text(path: Path, text: str) -> None:
 
 
 def _provider_preference_to_json(provider: ProviderConfig) -> dict[str, Any]:
-    """Serialize only runtime preferences for one provider."""
+    """Serialize only runtime preferences for one provider.
+
+    仅序列化单个提供商的运行时偏好。
+    """
     preference = {
         "default_model": provider.default_model,
         "headers": dict(provider.headers),
@@ -1093,7 +1281,10 @@ def _save_provider_definitions_to_catalog(
     *,
     paths: TauPaths | None,
 ) -> None:
-    """Persist provider definitions that are not already represented by the catalog."""
+    """Persist provider definitions that are not already represented by the catalog.
+
+    持久化目录中尚未表示的提供商定义。
+    """
     catalog_by_name = {entry.name: entry for entry in effective_catalog(paths)}
     entries_to_save = []
     for provider in settings.providers:
@@ -1108,7 +1299,10 @@ def _provider_definition_differs_from_catalog(
     provider: ProviderConfig,
     entry: ProviderCatalogEntry,
 ) -> bool:
-    """Return whether provider metadata changed enough to belong in catalog.toml."""
+    """Return whether provider metadata changed enough to belong in catalog.toml.
+
+    返回提供商元数据的变化是否足以写入 catalog.toml。
+    """
     if provider_kind(provider) != entry.kind:
         return True
     if provider.base_url != entry.base_url:
@@ -1143,7 +1337,10 @@ def _catalog_entry_from_provider(
     *,
     existing: ProviderCatalogEntry | None = None,
 ) -> ProviderCatalogEntry:
-    """Create catalog metadata from a runtime provider config."""
+    """Create catalog metadata from a runtime provider config.
+
+    根据运行时提供商配置创建目录元数据。
+    """
     return ProviderCatalogEntry(
         name=provider.name,
         display_name=existing.display_name if existing is not None else provider.name,
@@ -1173,6 +1370,10 @@ def _catalog_entry_from_provider(
 def _catalog_model_metadata_from_provider(
     provider: ProviderConfig,
 ) -> dict[str, ModelCatalogMetadata]:
+    """Convert runtime model metadata into catalog-owned metadata.
+
+    将运行时模型元数据转换为由目录维护的元数据。
+    """
     metadata_by_model = getattr(provider, "model_metadata", {})
     return {
         model: ModelCatalogMetadata(
@@ -1200,10 +1401,16 @@ def provider_settings_from_json(
 ) -> ProviderSettings:
     """Parse provider preferences from JSON-compatible data.
 
+    从 JSON 兼容数据解析提供商偏好。
+
     The current providers.json shape stores runtime preferences under
     provider_preferences. The older providers[] shape is still accepted for
     migration and compatibility; saves rewrite it to provider_preferences and
     move custom provider definitions to catalog.toml.
+
+    当前 providers.json 结构将运行时偏好存储在 provider_preferences 下。
+    为迁移和兼容性仍接受旧版 providers[] 结构；保存时会将其改写为
+    provider_preferences，并把自定义提供商定义迁移到 catalog.toml。
     """
     schema_version = data.get("schema_version")
     if schema_version not in (None, PROVIDER_SETTINGS_SCHEMA_VERSION):
@@ -1244,6 +1451,10 @@ def _providers_with_preferences(
     *,
     paths: TauPaths | None,
 ) -> tuple[ProviderConfig, ...]:
+    """Apply stored preferences to providers from the effective catalog.
+
+    将已存储偏好应用到有效目录中的提供商。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError("Provider settings field must be an object: provider_preferences")
     catalog_configs = {provider.name: provider for provider in _effective_provider_configs(paths)}
@@ -1260,6 +1471,10 @@ def _providers_with_preferences(
             # catalog entry may be removed independently, leaving an orphaned
             # preference behind. Ignore it so one stale entry cannot prevent Tau
             # from starting or running `tau setup` to register it again.
+
+            # 偏好包含运行时覆盖值，而不是提供商定义。目录条目可能被独立删除，
+            # 从而留下孤立偏好。忽略它，避免单个陈旧条目阻止 Tau 启动，
+            # 或阻止运行 `tau setup` 重新注册该提供商。
             continue
         providers.append(
             _apply_provider_preference(
@@ -1275,11 +1490,18 @@ def _apply_provider_preference(
     provider: ProviderConfig,
     value: object,
 ) -> ProviderConfig:
+    """Validate and apply one persisted runtime preference object.
+
+    校验并应用一个已持久化的运行时偏好对象。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError("Provider preference entries must be objects")
     # Provider preferences are user-level state shared across Tau versions.
     # Ignore options introduced by newer versions while continuing to validate
     # every recognized option below.
+
+    # 提供商偏好是 Tau 各版本共享的用户级状态。忽略较新版本引入的选项，
+    # 同时继续校验下面每个可识别的选项。
     default_model = (
         _string(value.get("default_model"), f"provider_preferences.{provider.name}.default_model")
         if "default_model" in value
@@ -1363,6 +1585,10 @@ def _inference_providers_dict(
     provider: OpenAICompatibleProviderConfig,
     field_name: str,
 ) -> dict[str, str]:
+    """Parse and validate per-model Hugging Face inference routes.
+
+    解析并校验逐模型的 Hugging Face 推理路由。
+    """
     routes = _string_dict(value, field_name)
     routes = {model: route.strip() for model, route in routes.items() if model in provider.models}
     _validate_inference_providers(provider.name, provider.models, routes)
@@ -1377,6 +1603,10 @@ def _thinking_defaults_dict(
     ignore_unknown_models: bool = False,
     ignore_unavailable: bool = False,
 ) -> dict[str, ThinkingLevel]:
+    """Parse remembered thinking defaults and filter unavailable entries as requested.
+
+    解析已记录的思考默认值，并按要求过滤不可用条目。
+    """
     raw = _raw_thinking_defaults_dict(value, field_name)
     if ignore_unknown_models:
         raw = {model: level for model, level in raw.items() if model in provider.models}
@@ -1397,6 +1627,10 @@ def _thinking_defaults_dict(
 
 
 def _raw_thinking_defaults_dict(value: object, field_name: str) -> dict[str, ThinkingLevel]:
+    """Parse a raw model-to-thinking-level mapping.
+
+    解析原始的模型到思考级别映射。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError(f"Provider field must be a thinking mode object: {field_name}")
     defaults: dict[str, ThinkingLevel] = {}
@@ -1410,6 +1644,10 @@ def _raw_thinking_defaults_dict(value: object, field_name: str) -> dict[str, Thi
 
 
 def _scoped_models_from_json(value: object) -> tuple[ScopedModelConfig, ...]:
+    """Parse unique scoped provider/model references from JSON data.
+
+    从 JSON 数据解析唯一的限定范围提供商与模型引用。
+    """
     if value is None:
         return ()
     if not isinstance(value, list):
@@ -1434,7 +1672,10 @@ def resolve_provider_selection(
     provider_name: str | None = None,
     model: str | None = None,
 ) -> ProviderSelection:
-    """Resolve the provider and model for a run."""
+    """Resolve the provider and model for a run.
+
+    为一次运行解析提供商与模型。
+    """
     provider = settings.get_provider(provider_name)
     selected_model = model or provider.default_model
     if not selected_model:
@@ -1444,7 +1685,10 @@ def resolve_provider_selection(
 
 
 def validate_provider_model(provider: ProviderConfig, model: str) -> None:
-    """Raise when ``model`` is not declared by ``provider``."""
+    """Raise when ``model`` is not declared by ``provider``.
+
+    当 ``model`` 未由 ``provider`` 声明时抛出异常。
+    """
     if model in provider.models:
         return
     available = ", ".join(sorted(provider.models)) or "none"
@@ -1459,7 +1703,10 @@ def provider_thinking_levels(
     *,
     model: str | None = None,
 ) -> tuple[ThinkingLevel, ...]:
-    """Return thinking levels supported by a provider/model pair."""
+    """Return thinking levels supported by a provider/model pair.
+
+    返回某个提供商与模型组合支持的思考级别。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     if metadata is not None and metadata.reasoning is False:
@@ -1487,7 +1734,10 @@ def provider_thinking_unavailable_reason(
     *,
     model: str | None = None,
 ) -> str | None:
-    """Explain why a provider/model pair has no configurable thinking modes."""
+    """Explain why a provider/model pair has no configurable thinking modes.
+
+    说明某个提供商与模型组合为何没有可配置的思考模式。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     if metadata is not None and metadata.reasoning is False:
@@ -1510,6 +1760,10 @@ def provider_thinking_unavailable_reason(
 def _levels_from_thinking_map(
     thinking_level_map: dict[ThinkingLevel, str | None],
 ) -> tuple[ThinkingLevel, ...]:
+    """Return supported levels declared by a model thinking-level map.
+
+    返回模型思考级别映射所声明的受支持级别。
+    """
     return tuple(
         level
         for level in THINKING_LEVELS
@@ -1521,6 +1775,10 @@ def _metadata_supports_thinking_level(
     metadata: ProviderModelMetadata,
     level: ThinkingLevel,
 ) -> bool:
+    """Return whether model metadata permits a specific thinking level.
+
+    返回模型元数据是否允许指定思考级别。
+    """
     if metadata.reasoning is None and not metadata.thinking_level_map:
         return True
     return _thinking_level_map_supports(metadata.thinking_level_map, level)
@@ -1530,16 +1788,28 @@ def _thinking_level_map_supports(
     thinking_level_map: dict[ThinkingLevel, str | None],
     level: ThinkingLevel,
 ) -> bool:
+    """Interpret one thinking-level map entry with default high-level exclusions.
+
+    解释一个思考级别映射条目，并应用默认的高级别排除规则。
+    """
     if level in thinking_level_map:
         return thinking_level_map[level] is not None
     return level not in {"xhigh", "max"}
 
 
 def _metadata_for_model(provider: ProviderConfig, model: str) -> ProviderModelMetadata | None:
+    """Return runtime metadata for a configured model when present.
+
+    返回已配置模型的运行时元数据；不存在时返回空值。
+    """
     return getattr(provider, "model_metadata", {}).get(model)
 
 
 def _provider_api(provider: ProviderConfig, model: str | None = None) -> ProviderApi | str:
+    """Resolve the effective wire API for a provider and optional model.
+
+    解析提供商及可选模型实际使用的通信 API。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     if metadata is not None and metadata.api is not None:
@@ -1550,18 +1820,30 @@ def _provider_api(provider: ProviderConfig, model: str | None = None) -> Provide
 
 
 def _model_base_url(provider: ProviderConfig, model: str | None = None) -> str:
+    """Resolve a model-specific base URL with provider fallback.
+
+    解析模型专用基础 URL，并在缺失时回退到提供商配置。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     return metadata.base_url if metadata is not None and metadata.base_url else provider.base_url
 
 
 def _model_headers(provider: ProviderConfig, model: str | None = None) -> dict[str, str]:
+    """Merge provider headers with model-specific header overrides.
+
+    合并提供商请求头与模型专用请求头覆盖值。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     return {**provider.headers, **(metadata.headers if metadata is not None else {})}
 
 
 def _model_compat(provider: ProviderConfig, model: str | None = None) -> dict[str, Any]:
+    """Layer detected, provider, and model compatibility settings.
+
+    依次叠加自动检测、提供商和模型级兼容性设置。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     return {
@@ -1572,6 +1854,10 @@ def _model_compat(provider: ProviderConfig, model: str | None = None) -> dict[st
 
 
 def _detected_compat(provider: ProviderConfig, model: str) -> dict[str, Any]:
+    """Infer protocol compatibility defaults from provider identity and endpoint.
+
+    根据提供商身份和端点推断协议兼容性默认值。
+    """
     base_url = _model_base_url(provider, model)
     is_together = provider.name == "together" or "api.together.ai" in base_url
     is_zai = provider.name == "zai" or "api.z.ai" in base_url
@@ -1608,6 +1894,9 @@ def _detected_compat(provider: ProviderConfig, model: str) -> dict[str, Any]:
         # OpenAI's prompt-cache fields and affinity headers are not universally
         # accepted by compatible gateways. Default them on only for the official
         # endpoint; provider/model compat can opt another route in explicitly.
+
+        # OpenAI 的提示缓存字段和亲和性请求头并非所有兼容网关都接受。
+        # 默认仅对官方端点启用；其他路由可通过提供商或模型兼容设置显式开启。
         "supportsPromptCacheKey": is_openai_api,
         "sendSessionAffinityHeaders": is_openai_api and is_openai_responses,
         "sessionAffinityFormat": "openrouter" if is_openrouter else "openai",
@@ -1615,19 +1904,30 @@ def _detected_compat(provider: ProviderConfig, model: str) -> dict[str, Any]:
         # catalog providers speak the Anthropic protocol through a gateway, and one
         # proxies to non-Anthropic models, so they default to no breakpoints. This
         # is a detected default, overridable per provider or per model.
+
+        # 目前只有 Anthropic 第一方服务已知接受 cache_control。多个目录提供商通过
+        # 网关使用 Anthropic 协议，其中还有一个会代理到非 Anthropic 模型，因此
+        # 默认不设置缓存断点。此项为自动检测默认值，可按提供商或模型覆盖。
         "supportsCacheControl": is_anthropic_api,
         "supportsCacheControlOnTools": True,
     }
 
 
 def provider_model_max_tokens(provider: ProviderConfig, model: str | None = None) -> int | None:
-    """Return the catalog output token limit for a model, or None when it is unset."""
+    """Return the catalog output token limit for a model, or None when it is unset.
+
+    返回目录中模型的输出令牌上限；未设置时返回空值。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     return metadata.max_tokens if metadata is not None else None
 
 
 def provider_model_supports_images(provider: ProviderConfig, model: str | None = None) -> bool:
+    """Return whether model metadata declares image input support.
+
+    返回模型元数据是否声明支持图像输入。
+    """
     selected_model = model or provider.default_model
     metadata = _metadata_for_model(provider, selected_model)
     return metadata is not None and "image" in metadata.input
@@ -1638,7 +1938,10 @@ def provider_default_thinking_level(
     *,
     model: str | None = None,
 ) -> ThinkingLevel | None:
-    """Return the preferred thinking level for a provider/model pair."""
+    """Return the preferred thinking level for a provider/model pair.
+
+    返回某个提供商与模型组合的首选思考级别。
+    """
     levels = provider_thinking_levels(provider, model=model)
     if not levels:
         return None
@@ -1658,18 +1961,30 @@ def resolve_startup_thinking_level(
 ) -> ThinkingLevel | None:
     """Pick a valid startup thinking level for a provider/model pair.
 
+    为某个提供商与模型组合选择有效的启动思考级别。
+
     Startup (TUI and print mode) must never crash just because the remembered
     default model does not support the global default level. The level is
     resolved with the same precedence used when switching models mid-session:
     the remembered per-model preference wins, then the global ``preferred``
     level, then the provider/catalog default, then the first available level.
 
+    启动过程（TUI 和打印模式）不能仅因记忆的默认模型不支持全局默认级别而崩溃。
+    级别解析采用与会话中途切换模型相同的优先级：先使用逐模型记忆偏好，再使用
+    全局 ``preferred`` 级别，接着使用提供商或目录默认值，最后使用首个可用级别。
+
     An explicit ``cli_override`` (from ``--thinking``) takes precedence over
     everything, and unlike the fallback chain it is strict: requesting a level
     the model does not support raises :class:`ProviderConfigError` instead of
     silently falling back.
 
+    显式的 ``cli_override``（来自 ``--thinking``）优先于其他设置，并且不同于
+    回退链，它采用严格模式：请求模型不支持的级别时会抛出
+    :class:`ProviderConfigError`，而不是静默回退。
+
     Returns ``None`` when the model has no configurable thinking levels.
+
+    当模型没有可配置的思考级别时返回 ``None``。
     """
     levels = provider_thinking_levels(provider, model=model)
     if cli_override is not None:
@@ -1699,7 +2014,10 @@ def openai_compatible_config_from_provider(
     model: str | None = None,
     thinking_level: ThinkingLevel | None = None,
 ) -> OpenAICompatibleConfig:
-    """Build OpenAI-compatible runtime config from durable settings."""
+    """Build OpenAI-compatible runtime config from durable settings.
+
+    根据持久化设置构建 OpenAI 兼容运行时配置。
+    """
     api_key = _api_key_from_provider(provider, credential_reader=credential_reader)
     selected_model = model or provider.default_model
     base_url = _model_base_url(provider, selected_model)
@@ -1743,7 +2061,10 @@ def anthropic_config_from_provider(
     model: str | None = None,
     thinking_level: ThinkingLevel | None = None,
 ) -> AnthropicConfig:
-    """Build Anthropic runtime config from durable settings."""
+    """Build Anthropic runtime config from durable settings.
+
+    根据持久化设置构建 Anthropic 运行时配置。
+    """
     api_key = _api_key_from_provider(provider, credential_reader=credential_reader)
     selected_model = model or provider.default_model
     thinking_budget_tokens = _anthropic_thinking_budget_from_provider(
@@ -1778,7 +2099,10 @@ def anthropic_config_from_provider(
 
 
 def provider_kind(provider: ProviderConfig) -> ProviderKind:
-    """Return the durable provider kind."""
+    """Return the durable provider kind.
+
+    返回持久化的提供商类型。
+    """
     if isinstance(provider, AnthropicProviderConfig):
         return "anthropic"
     if isinstance(provider, OpenAICodexProviderConfig):
@@ -1796,7 +2120,10 @@ def provider_has_usable_credentials(
     *,
     credential_reader: CredentialReader | None = None,
 ) -> bool:
-    """Return whether Tau can attempt calls for this provider without prompting setup."""
+    """Return whether Tau can attempt calls for this provider without prompting setup.
+
+    返回 Tau 是否能在不提示配置的情况下尝试调用此提供商。
+    """
     if provider.credential_name and credential_reader is not None:
         get_oauth = getattr(credential_reader, "get_oauth", None)
         if (
@@ -1816,6 +2143,10 @@ def _reasoning_effort_from_provider(
     model: str | None,
     thinking_level: ThinkingLevel | None,
 ) -> str | None:
+    """Translate a thinking level into an OpenAI-compatible reasoning effort.
+
+    将思考级别转换为 OpenAI 兼容的推理强度。
+    """
     if thinking_level is None or provider.thinking_parameter not in {
         "reasoning_effort",
         "reasoning.effort",
@@ -1840,6 +2171,9 @@ def _reasoning_effort_from_provider(
     if provider.name == "huggingface" and normalized == "minimal":
         # Hugging Face's router currently accepts low/medium/high/xhigh/max/none
         # for reasoning_effort, but rejects Pi/Tau's "minimal" label.
+
+        # Hugging Face 路由器当前接受 low/medium/high/xhigh/max/none 作为
+        # reasoning_effort，但会拒绝 Pi/Tau 的 "minimal" 标签。
         return "low"
     return reasoning_effort_for_level(normalized)
 
@@ -1850,6 +2184,10 @@ def _anthropic_thinking_budget_from_provider(
     model: str | None,
     thinking_level: ThinkingLevel | None,
 ) -> int | None:
+    """Translate a thinking level into an Anthropic token budget when required.
+
+    在需要时将思考级别转换为 Anthropic 思考令牌预算。
+    """
     if thinking_level is None or provider.thinking_parameter != "anthropic.thinking":
         return None
 
@@ -1876,6 +2214,10 @@ def _metadata_thinking_value(
     model: str,
     level: ThinkingLevel,
 ) -> str | None:
+    """Return a model-specific transport value for one thinking level.
+
+    返回某个思考级别对应的模型专用传输值。
+    """
     metadata = _metadata_for_model(provider, model)
     if metadata is None:
         return None
@@ -1884,6 +2226,10 @@ def _metadata_thinking_value(
 
 
 def _thinking_format(provider: ProviderConfig, model: str) -> str:
+    """Resolve the reasoning payload format for a provider and model.
+
+    解析提供商与模型使用的推理载荷格式。
+    """
     compat = _model_compat(provider, model)
     value = compat.get("thinkingFormat")
     if isinstance(value, str) and value:
@@ -1906,6 +2252,10 @@ def _include_reasoning_effort_none(
     model: str,
     thinking_level: ThinkingLevel | None,
 ) -> bool:
+    """Return whether an explicit disabled reasoning value must be sent.
+
+    返回是否必须显式发送禁用推理的值。
+    """
     if thinking_level is None:
         return False
     try:
@@ -1923,6 +2273,10 @@ def _reasoning_effort_from_anthropic_provider(
     model: str,
     thinking_level: ThinkingLevel | None,
 ) -> str | None:
+    """Resolve Anthropic effort text from a configured thinking level.
+
+    根据已配置的思考级别解析 Anthropic 推理强度文本。
+    """
     if thinking_level is None:
         return None
     selected_model = model
@@ -1939,6 +2293,10 @@ def _anthropic_thinking_mode(
     *,
     thinking_level: ThinkingLevel | None = None,
 ) -> str:
+    """Choose adaptive, disabled, or budget-based Anthropic thinking mode.
+
+    选择自适应、禁用或基于预算的 Anthropic 思考模式。
+    """
     compat = _model_compat(provider, model)
     if compat.get("forceAdaptiveThinking") is True:
         if thinking_level is not None and normalize_thinking_level(thinking_level) == "off":
@@ -1948,6 +2306,10 @@ def _anthropic_thinking_mode(
 
 
 def _normalize_anthropic_base_url(base_url: str) -> str:
+    """Normalize an Anthropic endpoint so it ends with the v1 path.
+
+    规范化 Anthropic 端点，确保其以 v1 路径结尾。
+    """
     normalized = base_url.rstrip("/")
     if normalized.endswith("/v1"):
         return normalized
@@ -1962,11 +2324,17 @@ def anthropic_cache_settings(
 ) -> tuple[CacheRetention, bool]:
     """Resolve prompt-cache settings for one Anthropic-protocol request.
 
+    为一次 Anthropic 协议请求解析提示缓存设置。
+
     Capability comes from compat, which layers a detected default under the
     provider's own compat and then per-model compat. Intent comes from the auth
     mode: subscription OAuth is not billed per token, so it asks for the 1 hour
     TTL, while an API key keeps the shorter default. Capability only ever narrows
     intent, so the two compose without any precedence rule.
+
+    能力信息来自 compat：它以自动检测值为底层，再叠加提供商和逐模型兼容设置。
+    使用意图来自认证模式：订阅 OAuth 不按令牌计费，因此请求 1 小时 TTL；API 密钥
+    则保留较短的默认值。能力只会收窄使用意图，因此两者组合时无需额外优先级规则。
     """
     compat = _model_compat(provider, model)
     if compat.get("supportsCacheControl") is False:
@@ -1978,6 +2346,10 @@ def anthropic_cache_settings(
 
 
 def _provider_from_json(data: object) -> ProviderConfig:
+    """Parse and validate one legacy full provider definition from JSON data.
+
+    从 JSON 数据解析并校验一个旧版完整提供商定义。
+    """
     if not isinstance(data, dict):
         raise ProviderConfigError("Provider entries must be JSON objects")
     provider_type = _string(data.get("type"), "providers[].type")
@@ -2111,6 +2483,10 @@ def _api_key_from_provider(
     *,
     credential_reader: CredentialReader | None,
 ) -> str:
+    """Resolve an API key from stored credentials, OAuth state, or the environment.
+
+    从已存储凭据、OAuth 状态或环境变量解析 API 密钥。
+    """
     if provider.credential_name and credential_reader is not None:
         credential = credential_reader.get(provider.credential_name)
         if credential:
@@ -2136,6 +2512,10 @@ def _validate_provider_numbers(
     max_retries: int,
     max_retry_delay_seconds: float,
 ) -> None:
+    """Validate provider timeout and retry numeric constraints.
+
+    校验提供商超时和重试参数的数值约束。
+    """
     if isinstance(timeout_seconds, bool) or timeout_seconds <= 0:
         raise ProviderConfigError("Provider timeout_seconds must be greater than 0")
     if not isinstance(max_retries, int) or isinstance(max_retries, bool) or max_retries < 0:
@@ -2149,6 +2529,10 @@ def _validate_provider_numbers(
 
 
 def _validate_context_windows(context_windows: dict[str, int]) -> None:
+    """Validate model names and positive context-window sizes.
+
+    校验模型名称和正数上下文窗口大小。
+    """
     for model, context_window in context_windows.items():
         if not isinstance(model, str) or not model.strip():
             raise ProviderConfigError("Provider context_windows keys must be non-empty strings")
@@ -2164,6 +2548,10 @@ def _validate_model_metadata(
     models: tuple[str, ...],
     model_metadata: dict[str, ProviderModelMetadata],
 ) -> None:
+    """Validate model metadata keys, limits, modalities, costs, and mappings.
+
+    校验模型元数据的键、限制、输入模态、费用和映射。
+    """
     model_names = set(models)
     for model, metadata in model_metadata.items():
         if model not in model_names:
@@ -2188,6 +2576,10 @@ def _validate_model_metadata(
 
 
 def _validate_runtime_cost_tiers(tiers: tuple[ModelCostTier, ...]) -> None:
+    """Validate runtime pricing tiers and their increasing token limits.
+
+    校验运行时计费层级及其递增的令牌上限。
+    """
     if tiers and tiers[-1].max_input_tokens is not None:
         raise ProviderConfigError(
             "Provider model_metadata final cost tier must omit max_input_tokens"
@@ -2208,6 +2600,10 @@ def _validate_runtime_cost_tiers(tiers: tuple[ModelCostTier, ...]) -> None:
 
 
 def _validate_string_dict(value: dict[str, str], field_name: str) -> None:
+    """Validate a mapping of non-empty string keys and values.
+
+    校验键和值均为非空字符串的映射。
+    """
     for key, item in value.items():
         if not isinstance(key, str) or not key.strip():
             raise ProviderConfigError(f"{field_name} keys must be non-empty strings")
@@ -2216,6 +2612,10 @@ def _validate_string_dict(value: dict[str, str], field_name: str) -> None:
 
 
 def _validate_json_object(value: dict[str, Any], field_name: str) -> None:
+    """Validate a named mapping as a JSON-compatible object.
+
+    将指定映射校验为 JSON 兼容对象。
+    """
     for key, item in value.items():
         if not isinstance(key, str) or not key.strip():
             raise ProviderConfigError(f"{field_name} keys must be non-empty strings")
@@ -2223,6 +2623,10 @@ def _validate_json_object(value: dict[str, Any], field_name: str) -> None:
 
 
 def _validate_json_value(value: object, field_name: str) -> None:
+    """Recursively validate that a value is JSON-compatible.
+
+    递归校验一个值是否兼容 JSON。
+    """
     if value is None or isinstance(value, str | int | float | bool):
         return
     if isinstance(value, list):
@@ -2239,6 +2643,10 @@ def _validate_json_value(value: object, field_name: str) -> None:
 
 
 def _reject_codex_legacy_compat(compat: dict[str, Any]) -> None:
+    """Reject unsupported compatibility data on legacy Codex definitions.
+
+    拒绝旧版 Codex 定义中不受支持的兼容性数据。
+    """
     if compat:
         raise ProviderConfigError("OpenAI Codex legacy provider compat is not supported")
 
@@ -2247,7 +2655,10 @@ _HF_INFERENCE_PROVIDER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def validate_huggingface_inference_provider(value: str) -> str:
-    """Return a normalized explicit Hugging Face provider suffix."""
+    """Return a normalized explicit Hugging Face provider suffix.
+
+    返回规范化且明确指定的 Hugging Face 提供商后缀。
+    """
     normalized = value.strip()
     if not _HF_INFERENCE_PROVIDER_PATTERN.fullmatch(normalized):
         raise ProviderConfigError(
@@ -2265,6 +2676,10 @@ def _validate_inference_providers(
     models: tuple[str, ...],
     inference_providers: dict[str, str],
 ) -> None:
+    """Validate Hugging Face per-model inference-provider preferences.
+
+    校验 Hugging Face 的逐模型推理提供商偏好。
+    """
     if inference_providers and provider_name != "huggingface":
         raise ProviderConfigError(
             "inference_providers preferences are only supported for the huggingface provider"
@@ -2278,6 +2693,10 @@ def _validate_inference_providers(
 
 
 def _validate_thinking_defaults(thinking_defaults: dict[str, ThinkingLevel]) -> None:
+    """Validate remembered model names and normalized thinking levels.
+
+    校验已记录的模型名称和规范化思考级别。
+    """
     for model, thinking_level in thinking_defaults.items():
         if not isinstance(model, str) or not model.strip():
             raise ProviderConfigError("Provider thinking_defaults keys must be non-empty strings")
@@ -2294,6 +2713,10 @@ def _validate_thinking_config(
     thinking_default: ThinkingLevel | None,
     thinking_parameter: ThinkingParameter | None,
 ) -> None:
+    """Validate the consistency of provider-level thinking configuration.
+
+    校验提供商级思考配置的一致性。
+    """
     if thinking_levels is None:
         if thinking_models or thinking_default is not None or thinking_parameter is not None:
             raise ProviderConfigError(
@@ -2327,11 +2750,19 @@ def _reject_unimplemented_thinking_config(
     provider_type: str,
     thinking_levels: tuple[ThinkingLevel, ...] | None,
 ) -> None:
+    """Reject thinking controls for provider types that do not implement them.
+
+    拒绝尚未实现思考控制的提供商类型使用相关配置。
+    """
     if thinking_levels is not None:
         raise ProviderConfigError(f"{provider_type} thinking controls are not implemented yet")
 
 
 def _optional_provider_api(value: object, field_name: str) -> ProviderApi | None:
+    """Parse an optional supported provider API identifier.
+
+    解析可选的受支持提供商 API 标识。
+    """
     if value is None:
         return None
     if value in {
@@ -2347,6 +2778,10 @@ def _optional_provider_api(value: object, field_name: str) -> ProviderApi | None
 
 
 def _optional_string(value: object, field_name: str) -> str | None:
+    """Parse an optional non-empty trimmed string.
+
+    解析可选的非空去空白字符串。
+    """
     if value is None:
         return None
     if not isinstance(value, str) or not value.strip():
@@ -2355,12 +2790,20 @@ def _optional_string(value: object, field_name: str) -> str | None:
 
 
 def _string(value: object, field_name: str) -> str:
+    """Parse a required non-empty trimmed string.
+
+    解析必需的非空去空白字符串。
+    """
     if not isinstance(value, str) or not value.strip():
         raise ProviderConfigError(f"Provider field must be a non-empty string: {field_name}")
     return value.strip()
 
 
 def _string_tuple(value: object, field_name: str) -> tuple[str, ...]:
+    """Parse a required non-empty list of strings into a tuple.
+
+    将必需的非空字符串列表解析为元组。
+    """
     if not isinstance(value, list) or not value:
         raise ProviderConfigError(f"Provider field must be a non-empty string list: {field_name}")
     items = tuple(item.strip() for item in value if isinstance(item, str) and item.strip())
@@ -2370,6 +2813,10 @@ def _string_tuple(value: object, field_name: str) -> tuple[str, ...]:
 
 
 def _optional_string_tuple(value: object, field_name: str) -> tuple[str, ...]:
+    """Parse an optional string list into a tuple.
+
+    将可选字符串列表解析为元组。
+    """
     if value is None:
         return ()
     if not isinstance(value, list):
@@ -2384,6 +2831,10 @@ def _optional_thinking_levels(
     value: object,
     field_name: str,
 ) -> tuple[ThinkingLevel, ...] | None:
+    """Parse and normalize an optional list of thinking levels.
+
+    解析并规范化可选的思考级别列表。
+    """
     if value is None:
         return None
     if not isinstance(value, list):
@@ -2395,6 +2846,10 @@ def _optional_thinking_levels(
 
 
 def _optional_thinking_level(value: object, field_name: str) -> ThinkingLevel | None:
+    """Parse and normalize one optional thinking level.
+
+    解析并规范化一个可选思考级别。
+    """
     if value is None:
         return None
     if not isinstance(value, str):
@@ -2409,6 +2864,10 @@ def _optional_thinking_parameter(
     value: object,
     field_name: str,
 ) -> ThinkingParameter | None:
+    """Parse an optional supported thinking transport parameter.
+
+    解析可选的受支持思考传输参数。
+    """
     if value is None:
         return None
     if value == "reasoning_effort":
@@ -2424,6 +2883,10 @@ def _optional_thinking_parameter(
 
 
 def _string_dict(value: object, field_name: str) -> dict[str, str]:
+    """Parse a mapping with non-empty string keys and values.
+
+    解析键和值均为非空字符串的映射。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError(f"Provider field must be a string object: {field_name}")
     items: dict[str, str] = {}
@@ -2437,6 +2900,10 @@ def _string_dict(value: object, field_name: str) -> dict[str, str]:
 
 
 def _json_dict(value: object, field_name: str) -> dict[str, Any]:
+    """Parse and validate a JSON-compatible object mapping.
+
+    解析并校验 JSON 兼容对象映射。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError(f"Provider field must be an object: {field_name}")
     items: dict[str, Any] = {}
@@ -2453,6 +2920,10 @@ def _model_metadata_dict(
     models: tuple[str, ...],
     field_name: str,
 ) -> dict[str, ProviderModelMetadata]:
+    """Parse per-model runtime metadata for declared models.
+
+    为已声明模型解析逐模型运行时元数据。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError(f"Provider field must be an object: {field_name}")
     model_names = set(models)
@@ -2490,6 +2961,10 @@ def _model_metadata_dict(
 
 
 def _cost_tiers(value: object, field_name: str) -> tuple[ModelCostTier, ...]:
+    """Parse and validate a sequence of model pricing tiers.
+
+    解析并校验一组模型计费层级。
+    """
     if not isinstance(value, list):
         raise ProviderConfigError(f"Provider field must be an array: {field_name}")
     tiers: list[ModelCostTier] = []
@@ -2532,6 +3007,10 @@ def _thinking_level_map_dict(
     value: object,
     field_name: str,
 ) -> dict[ThinkingLevel, str | None]:
+    """Parse normalized thinking levels mapped to transport values or null.
+
+    解析从规范化思考级别到传输值或空值的映射。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError(f"Provider field must be an object: {field_name}")
     items: dict[ThinkingLevel, str | None] = {}
@@ -2548,6 +3027,10 @@ def _thinking_level_map_dict(
 
 
 def _float_dict(value: object, field_name: str) -> dict[str, float]:
+    """Parse a mapping of names to non-negative floating-point values.
+
+    解析名称到非负浮点数值的映射。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError(f"Provider field must be a number object: {field_name}")
     items: dict[str, float] = {}
@@ -2561,6 +3044,10 @@ def _float_dict(value: object, field_name: str) -> dict[str, float]:
 
 
 def _optional_bool(value: object, field_name: str) -> bool | None:
+    """Parse an optional strict boolean value.
+
+    解析可选的严格布尔值。
+    """
     if value is None:
         return None
     if not isinstance(value, bool):
@@ -2569,6 +3056,10 @@ def _optional_bool(value: object, field_name: str) -> bool | None:
 
 
 def _optional_positive_int(value: object, field_name: str) -> int | None:
+    """Parse an optional strictly positive integer.
+
+    解析可选的严格正整数。
+    """
     if value is None:
         return None
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
@@ -2577,6 +3068,10 @@ def _optional_positive_int(value: object, field_name: str) -> int | None:
 
 
 def _context_window_dict(value: object, field_name: str) -> dict[str, int]:
+    """Parse model context-window sizes as positive integers.
+
+    将模型上下文窗口大小解析为正整数。
+    """
     if not isinstance(value, dict):
         raise ProviderConfigError(f"Provider field must be an integer object: {field_name}")
     items: dict[str, int] = {}
@@ -2592,6 +3087,10 @@ def _context_window_dict(value: object, field_name: str) -> dict[str, int]:
 
 
 def _positive_float(value: object, field_name: str) -> float:
+    """Parse a numeric value as a strictly positive float.
+
+    将数值解析为严格正浮点数。
+    """
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise ProviderConfigError(f"Provider field must be a positive number: {field_name}")
     converted = float(value)
@@ -2601,6 +3100,10 @@ def _positive_float(value: object, field_name: str) -> float:
 
 
 def _non_negative_int(value: object, field_name: str) -> int:
+    """Parse a value as a non-negative integer.
+
+    将值解析为非负整数。
+    """
     if not isinstance(value, int) or isinstance(value, bool):
         raise ProviderConfigError(f"Provider field must be a non-negative integer: {field_name}")
     if value < 0:
@@ -2609,6 +3112,10 @@ def _non_negative_int(value: object, field_name: str) -> int:
 
 
 def _non_negative_float(value: object, field_name: str) -> float:
+    """Parse a numeric value as a non-negative float.
+
+    将数值解析为非负浮点数。
+    """
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise ProviderConfigError(f"Provider field must be a non-negative number: {field_name}")
     converted = float(value)

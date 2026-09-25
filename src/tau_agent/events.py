@@ -1,4 +1,7 @@
-"""Pi-compatible events emitted by Tau's portable agent layer."""
+"""Pi-compatible events emitted by Tau's portable agent layer.
+
+Tau 可移植代理层发出的 Pi 兼容事件。
+"""
 
 from __future__ import annotations
 

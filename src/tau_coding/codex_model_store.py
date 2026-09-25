@@ -1,4 +1,7 @@
-"""Persisted cache for authenticated OpenAI Codex model catalogs."""
+"""Persisted cache for authenticated OpenAI Codex model catalogs.
+
+经过认证的 OpenAI Codex 模型目录持久化缓存。
+"""
 
 from __future__ import annotations
 
@@ -23,7 +26,10 @@ CODEX_MODEL_STORE_SCHEMA_VERSION = 1
 
 
 def codex_model_store_path(paths: TauPaths | None = None) -> Path:
-    """Return the user-level Codex model-catalog cache path."""
+    """Return the user-level Codex model-catalog cache path.
+
+    返回用户级 Codex 模型目录缓存路径。
+    """
     return (paths or TauPaths()).codex_models_store_path
 
 
@@ -32,7 +38,10 @@ def cached_codex_model_catalog(
     *,
     account_id: str | None,
 ) -> RuntimeModelCatalog | None:
-    """Return the cached catalog only when it belongs to the active account."""
+    """Return the cached catalog only when it belongs to the active account.
+
+    仅当缓存目录属于当前账户时返回它。
+    """
     if not account_id:
         return None
     try:
@@ -53,7 +62,10 @@ def save_codex_model_catalog(
     paths: TauPaths | None = None,
     now: float | None = None,
 ) -> Path:
-    """Persist one validated, account-scoped Codex model snapshot atomically."""
+    """Persist one validated, account-scoped Codex model snapshot atomically.
+
+    原子持久化一个已校验、限定到账户的 Codex 模型快照。
+    """
     normalized_account_id = account_id.strip()
     if not normalized_account_id:
         raise ValueError("Codex account_id must be non-empty")
@@ -89,10 +101,18 @@ def save_codex_model_catalog(
 
 
 def _catalog_to_json(catalog: RuntimeModelCatalog) -> dict[str, Any]:
+    """Serialize a runtime model catalog to JSON-compatible data.
+
+    将运行时模型目录序列化为 JSON 兼容数据。
+    """
     return {"models": [_model_to_json(model) for model in catalog.models]}
 
 
 def _model_to_json(model: RuntimeModel) -> dict[str, Any]:
+    """Serialize one runtime model to JSON-compatible data.
+
+    将一个运行时模型序列化为 JSON 兼容数据。
+    """
     result: dict[str, Any] = {
         "id": model.id,
         "name": model.name,
@@ -111,6 +131,10 @@ def _model_to_json(model: RuntimeModel) -> dict[str, Any]:
 
 
 def _catalog_from_json(value: object) -> RuntimeModelCatalog | None:
+    """Parse and validate a runtime model catalog from cached JSON data.
+
+    从缓存的 JSON 数据解析并校验运行时模型目录。
+    """
     if not isinstance(value, Mapping):
         return None
     models_value = value.get("models")
@@ -126,6 +150,10 @@ def _catalog_from_json(value: object) -> RuntimeModelCatalog | None:
 
 
 def _model_from_json(value: object) -> RuntimeModel | None:
+    """Parse and validate one runtime model from cached JSON data.
+
+    从缓存的 JSON 数据解析并校验一个运行时模型。
+    """
     if not isinstance(value, Mapping):
         return None
     model_id = value.get("id")
@@ -177,6 +205,10 @@ def _model_from_json(value: object) -> RuntimeModel | None:
 
 
 def _limits_from_json(value: object) -> RuntimeModelLimits | None:
+    """Parse validated runtime model limits from cached JSON data.
+
+    从缓存的 JSON 数据解析已校验的运行时模型限制。
+    """
     if not isinstance(value, Mapping):
         return None
     context_window = value.get("context_window")

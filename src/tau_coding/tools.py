@@ -1,10 +1,16 @@
 """Built-in filesystem and shell tools for Tau coding sessions.
 
+Tau 编码会话的内置文件系统和 Shell 工具。
+
 The module exposes factory functions that create provider-neutral `AgentTool`
 objects plus richer `ToolDefinition` objects for callers that need prompt
 metadata and JSON schemas. The tools operate relative to a configurable working
 directory, return structured `AgentToolResult` values, and keep local
 filesystem/shell behavior outside the reusable `tau_agent` package.
+
+此模块提供工厂函数，用于创建提供商无关的 `AgentTool` 对象，以及供需要提示词元数据和
+JSON 模式的调用方使用的丰富 `ToolDefinition` 对象。工具相对于可配置工作目录运行，
+返回结构化结果，并将本地文件系统与 Shell 行为保留在可复用 `tau_agent` 包之外。
 """
 
 from __future__ import annotations
@@ -45,19 +51,28 @@ UTF8_BOM = "\ufeff"
 
 
 class ToolInputError(ValueError):
-    """Raised when a tool receives invalid structured arguments."""
+    """Raised when a tool receives invalid structured arguments.
+
+    工具收到无效结构化参数时抛出的异常。
+    """
 
 
 @dataclass(slots=True)
 class ImageSupportState:
-    """Mutable active-model image capability shared with built-in tools."""
+    """Mutable active-model image capability shared with built-in tools.
+
+    内置工具共享的可变活动模型图像能力状态。
+    """
 
     supported: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class ReadOperations:
-    """Pluggable filesystem operations used by the read tool."""
+    """Pluggable filesystem operations used by the read tool.
+
+    read 工具使用的可插拔文件系统操作。
+    """
 
     validate_path: Callable[[Path], None]
     read_bytes: Callable[[Path], bytes]
@@ -69,11 +84,16 @@ class ReadOperations:
 class TruncationResult:
     """Metadata describing how a tool output was shortened.
 
+    描述工具输出如何缩短的元数据。
+
     `content` contains the returned slice. The remaining fields record whether
     truncation happened, whether the line or byte limit was responsible, the
     total size of the original output, the size of the returned output, and
     edge cases such as partial-line output or a first line that is too large to
     display safely.
+
+    `content` 包含返回切片。其余字段记录是否发生截断、触发行或字节限制、原始与返回输出
+    的大小，以及部分行输出或首行过大等边界情况。
     """
 
     content: str
@@ -89,6 +109,10 @@ class TruncationResult:
     max_bytes: int
 
     def to_json(self) -> dict[str, JSONValue]:
+        """Serialize truncation metadata to JSON-compatible data.
+
+        将截断元数据序列化为 JSON 兼容数据。
+        """
         return asdict(self)
 
 
@@ -96,10 +120,16 @@ class TruncationResult:
 class ToolDefinition:
     """Complete definition for a coding tool before provider conversion.
 
+    转换为提供商工具前的完整编码工具定义。
+
     A definition contains the tool name, user-facing description, prompt
     metadata, JSON input schema, and async executor. `to_agent_tool()` converts
     it into the smaller `AgentTool` type consumed by the provider-neutral agent
     loop while preserving prompt metadata for clients that render tool guidance.
+
+    定义包含工具名称、面向用户的描述、提示词元数据、JSON 输入模式和异步执行器。
+    `to_agent_tool()` 会将其转换为代理循环使用的较小 AgentTool，同时为渲染指导的客户端
+    保留提示词元数据。
     """
 
     name: str
@@ -112,7 +142,10 @@ class ToolDefinition:
     ]
 
     def to_agent_tool(self) -> AgentTool:
-        """Convert the coding definition to the Pi-compatible core tool."""
+        """Convert the coding definition to the Pi-compatible core tool.
+
+        将编码定义转换为兼容 Pi 的核心工具。
+        """
 
         async def execute(
             tool_call_id: str,
@@ -120,6 +153,10 @@ class ToolDefinition:
             signal: ToolCancellationToken | None = None,
             on_update: ToolUpdateCallback | None = None,
         ) -> AgentToolResult:
+            """Forward validated execution arguments to the coding-tool executor.
+
+            将已校验的执行参数转发给编码工具执行器。
+            """
             del tool_call_id, on_update
             return await self.executor(arguments, signal)
 
@@ -138,6 +175,10 @@ _file_locks: dict[Path, asyncio.Lock] = {}
 
 
 def _validate_local_read_path(path: Path) -> None:
+    """Reject paths that are missing or are directories.
+
+    拒绝缺失路径或目录路径。
+    """
     if not path.exists():
         raise ToolInputError(f"File not found: {path}")
     if path.is_dir():
@@ -145,10 +186,18 @@ def _validate_local_read_path(path: Path) -> None:
 
 
 def _local_file_size(path: Path) -> int:
+    """Return the byte size of a local file.
+
+    返回本地文件的字节大小。
+    """
     return path.stat().st_size
 
 
 def _local_read_prefix(path: Path, limit: int) -> bytes:
+    """Read at most a bounded byte prefix from a local file.
+
+    从本地文件读取有界字节前缀。
+    """
     with path.open("rb") as file:
         return file.read(limit)
 
@@ -169,12 +218,18 @@ def create_coding_tools(
 ) -> list[AgentTool]:
     """Create the default coding-tool set for a local project.
 
+    为本地项目创建默认编码工具集合。
+
     The returned tools are ordered as `read`, `write`, `edit`, and `bash`.
     Relative paths used with those tools are resolved against `cwd`; when `cwd`
     is omitted, the process current working directory at factory-call time is
     used. The tools share per-path write/edit locks within this process so
     concurrent mutations of the same file do not interleave. When configured,
     `shell_command_prefix` is prepended to every bash tool command.
+
+    工具按 read、write、edit、bash 排序。相对路径以 cwd 为基准；未提供 cwd 时使用工厂
+    调用时的当前目录。同一进程内工具共享按路径的写入和编辑锁，避免并发变更交错；配置
+    Shell 前缀后，它会添加到每条 bash 命令之前。
     """
     root = Path.cwd() if cwd is None else Path(cwd)
     return [
@@ -193,6 +248,8 @@ def create_read_tool_definition(
 ) -> ToolDefinition:
     """Create a definition for the `read` tool.
 
+    为 `read` 工具创建定义。
+
     The tool reads a file resolved relative to `cwd` unless an absolute path is
     supplied. Text files are decoded as UTF-8 and may be sliced with optional
     1-indexed `offset` and positive integer `limit` arguments. Returned text is
@@ -205,6 +262,10 @@ def create_read_tool_definition(
     The executor raises `ToolInputError` for invalid arguments, missing files,
     directories, and offsets beyond the end of the file. Successful results
     include the resolved path and truncation metadata in `data`.
+
+    工具读取相对于 cwd 解析的文件；文本按 UTF-8 解码并可按行切片和截断，支持的图像会
+    根据内容检测并作为提供商无关图像块返回。执行器对无效参数和路径抛出 ToolInputError，
+    成功结果在 data 中包含解析路径和截断元数据。
     """
     root = Path.cwd() if cwd is None else Path(cwd)
     read_operations = operations or DEFAULT_READ_OPERATIONS
@@ -213,6 +274,10 @@ def create_read_tool_definition(
         arguments: Mapping[str, JSONValue],
         signal: ToolCancellationToken | None = None,
     ) -> AgentToolResult:
+        """Read, classify, bound, and return one text or image file.
+
+        读取、分类、限制并返回一个文本或图像文件。
+        """
         del signal
         raw_path = _str_arg(arguments, "path")
         path = _path_arg(arguments, "path", cwd=root)
@@ -392,6 +457,10 @@ def _omitted_image_result(
     source_bytes: int,
     reason: str,
 ) -> AgentToolResult:
+    """Return safe metadata explaining why an image attachment was omitted.
+
+    返回说明图像附件为何省略的安全元数据。
+    """
     return AgentToolResult(
         content=[
             TextContent(text=f"Read image file [{source_mime_type}]\n[Image omitted: {reason}.]")
@@ -410,7 +479,10 @@ def create_read_tool(
     operations: ReadOperations | None = None,
     image_support: ImageSupportState | None = None,
 ) -> AgentTool:
-    """Create an `AgentTool` for reading UTF-8 text files and supported images."""
+    """Create an `AgentTool` for reading UTF-8 text files and supported images.
+
+    创建用于读取 UTF-8 文本文件和受支持图像的 `AgentTool`。
+    """
     return create_read_tool_definition(
         cwd=cwd,
         operations=operations,
@@ -421,6 +493,8 @@ def create_read_tool(
 def create_write_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinition:
     """Create a definition for the `write` tool.
 
+    为 `write` 工具创建定义。
+
     The tool writes the supplied string `content` to `path`, resolving relative
     paths against `cwd`. Parent directories are created automatically and any
     existing file is overwritten. Writes use UTF-8 text encoding and are guarded
@@ -430,6 +504,9 @@ def create_write_tool_definition(*, cwd: str | Path | None = None) -> ToolDefini
     The executor raises `ToolInputError` when `path` or `content` has the wrong
     type. Successful results include the resolved path and number of characters
     written in `data`.
+
+    工具将字符串内容写入相对于 cwd 解析的路径，自动创建父目录并覆盖现有文件。按路径的
+    异步锁会串行化同一文件的写入和编辑。执行器校验参数，成功结果包含路径和字符数。
     """
     root = Path.cwd() if cwd is None else Path(cwd)
 
@@ -437,6 +514,10 @@ def create_write_tool_definition(*, cwd: str | Path | None = None) -> ToolDefini
         arguments: Mapping[str, JSONValue],
         signal: ToolCancellationToken | None = None,
     ) -> AgentToolResult:
+        """Serialize one locked UTF-8 file creation or overwrite.
+
+        串行执行一次加锁的 UTF-8 文件创建或覆盖。
+        """
         del signal
         path = _path_arg(arguments, "path", cwd=root)
         content = _str_arg(arguments, "content")
@@ -471,12 +552,17 @@ def create_write_tool_definition(*, cwd: str | Path | None = None) -> ToolDefini
 
 
 def create_write_tool(*, cwd: str | Path | None = None) -> AgentTool:
-    """Create an `AgentTool` for creating or overwriting UTF-8 text files."""
+    """Create an `AgentTool` for creating or overwriting UTF-8 text files.
+
+    创建用于新建或覆盖 UTF-8 文本文件的 `AgentTool`。
+    """
     return create_write_tool_definition(cwd=cwd).to_agent_tool()
 
 
 def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinition:
     """Create a definition for the `edit` tool.
+
+    为 `edit` 工具创建定义。
 
     The tool applies one or more exact text replacements to a single UTF-8 file
     resolved relative to `cwd`. Each edit item contains `oldText` and `newText`.
@@ -492,6 +578,10 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
 
     Successful results include the resolved path, edit count, an ndiff-style
     diff, a unified patch, and the first changed line in `data`.
+
+    工具对单个 UTF-8 文件应用一个或多个精确文本替换。所有替换会在写入前校验唯一性和
+    不重叠性；匹配时规范化换行符，写回时恢复原换行符并保留 BOM。成功结果包含差异、
+    统一补丁和首个变更行。
     """
     root = Path.cwd() if cwd is None else Path(cwd)
 
@@ -581,7 +671,10 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
 
 
 def create_edit_tool(*, cwd: str | Path | None = None) -> AgentTool:
-    """Create an `AgentTool` for exact, validated text replacement in one file."""
+    """Create an `AgentTool` for exact, validated text replacement in one file.
+
+    创建用于单文件精确且已校验文本替换的 `AgentTool`。
+    """
     return create_edit_tool_definition(cwd=cwd).to_agent_tool()
 
 
@@ -591,6 +684,8 @@ def create_bash_tool_definition(
     shell_command_prefix: str | None = None,
 ) -> ToolDefinition:
     """Create a definition for the `bash` tool.
+
+    为 `bash` 工具创建定义。
 
     The tool runs a shell command with `cwd` as the subprocess working
     directory, disconnects stdin, and combines stdout and stderr into one UTF-8
@@ -606,6 +701,10 @@ def create_bash_tool_definition(
     written to a temporary log file and that path is reported in `data`.
     Successful and failed command results both include exit code, timeout state,
     duration, truncation metadata, and full-output path metadata.
+
+    工具在 cwd 中运行 Shell 命令，断开 stdin，并合并 stdout 与 stderr。超时或取消时会
+    终止进程树；输出按尾部截断，完整输出可写入临时日志。结果包含退出码、超时状态、
+    持续时间、截断元数据和完整输出路径。
     """
     root = Path.cwd() if cwd is None else Path(cwd)
     prefix = shell_command_prefix.strip() if shell_command_prefix else None
@@ -739,7 +838,10 @@ def create_bash_tool(
     cwd: str | Path | None = None,
     shell_command_prefix: str | None = None,
 ) -> AgentTool:
-    """Create an `AgentTool` for executing shell commands with captured output."""
+    """Create an `AgentTool` for executing shell commands with captured output.
+
+    创建用于执行 Shell 命令并捕获输出的 `AgentTool`。
+    """
     return create_bash_tool_definition(
         cwd=cwd,
         shell_command_prefix=shell_command_prefix,
@@ -747,13 +849,20 @@ def create_bash_tool(
 
 
 def _prefixed_shell_command(command: str, prefix: str | None) -> str:
-    """Return a shell command with an opt-in setup prefix applied."""
+    """Return a shell command with an opt-in setup prefix applied.
+
+    返回应用了可选设置前缀的 Shell 命令。
+    """
     if prefix is None:
         return command
     return f"{prefix}\n{command}"
 
 
 def format_size(bytes_count: int) -> str:
+    """Format a byte count as a concise human-readable size.
+
+    将字节数格式化为简洁易读的大小。
+    """
     if bytes_count < 1024:
         return f"{bytes_count}B"
     if bytes_count < 1024 * 1024:
@@ -762,7 +871,10 @@ def format_size(bytes_count: int) -> str:
 
 
 def append_status_block(text: str, status: str) -> str:
-    """Append command status text after a blank line when output already exists."""
+    """Append command status text after a blank line when output already exists.
+
+    已有输出时，在空行后追加命令状态文本。
+    """
     return f"{text}\n\n{status}" if text else status
 
 
@@ -810,6 +922,10 @@ async def _communicate_with_cancellation(
 
 
 async def _wait_for_cancel(signal: ToolCancellationToken) -> None:
+    """Wait until a tool cancellation token is signalled.
+
+    等待工具取消令牌发出信号。
+    """
     while not signal.is_cancelled():
         await asyncio.sleep(0.05)
 
@@ -905,6 +1021,10 @@ def truncate_tail(
 
 
 def detect_line_ending(content: str) -> str:
+    """Detect the dominant line ending used by text content.
+
+    检测文本内容使用的主要换行符。
+    """
     crlf_index = content.find("\r\n")
     lf_index = content.find("\n")
     if lf_index == -1 or crlf_index == -1:
@@ -913,10 +1033,18 @@ def detect_line_ending(content: str) -> str:
 
 
 def normalize_to_lf(text: str) -> str:
+    """Normalize supported line endings to LF.
+
+    将受支持的换行符规范化为 LF。
+    """
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def restore_line_endings(text: str, ending: str) -> str:
+    """Restore normalized text to a chosen line ending.
+
+    将规范化文本恢复为指定换行符。
+    """
     return text.replace("\n", "\r\n") if ending == "\r\n" else text
 
 
@@ -954,6 +1082,10 @@ def apply_edits_to_normalized_content(
 
 
 def generate_diff_string(old: str, new: str) -> tuple[str, int | None]:
+    """Generate a compact diff and first changed line.
+
+    生成紧凑差异及首个变更行。
+    """
     old_lines = old.splitlines()
     new_lines = new.splitlines()
     diff = "\n".join(difflib.ndiff(old_lines, new_lines))
@@ -972,6 +1104,10 @@ def generate_diff_string(old: str, new: str) -> tuple[str, int | None]:
 
 
 def generate_unified_patch(path: str, old: str, new: str) -> str:
+    """Generate a unified patch for one file path.
+
+    为一个文件路径生成统一补丁。
+    """
     return "".join(
         difflib.unified_diff(
             old.splitlines(keepends=True),
@@ -1010,6 +1146,10 @@ def _truncation_result(
 
 
 def _split_lines_for_counting(content: str) -> list[str]:
+    """Split text into lines using output-count semantics.
+
+    按输出计数语义将文本拆分为行。
+    """
     if not content:
         return []
     lines = content.split("\n")
@@ -1019,6 +1159,10 @@ def _split_lines_for_counting(content: str) -> list[str]:
 
 
 def _truncate_string_to_bytes_from_end(text: str, max_bytes: int) -> str:
+    """Retain a valid UTF-8 suffix within a byte limit.
+
+    在字节限制内保留有效 UTF-8 后缀。
+    """
     encoded = text.encode()
     if len(encoded) <= max_bytes:
         return text
@@ -1027,6 +1171,10 @@ def _truncate_string_to_bytes_from_end(text: str, max_bytes: int) -> str:
 
 
 def _str_arg(arguments: Mapping[str, JSONValue], name: str) -> str:
+    """Read one required string tool argument.
+
+    读取一个必需的字符串工具参数。
+    """
     value = arguments.get(name)
     if not isinstance(value, str):
         raise ToolInputError(f"{name} must be a string")
@@ -1034,6 +1182,10 @@ def _str_arg(arguments: Mapping[str, JSONValue], name: str) -> str:
 
 
 def _path_arg(arguments: Mapping[str, JSONValue], name: str, *, cwd: Path) -> Path:
+    """Resolve one required path argument against the tool working directory.
+
+    相对于工具工作目录解析一个必需路径参数。
+    """
     value = _str_arg(arguments, name)
     path = Path(value).expanduser()
     if not path.is_absolute():
@@ -1042,6 +1194,10 @@ def _path_arg(arguments: Mapping[str, JSONValue], name: str, *, cwd: Path) -> Pa
 
 
 def _optional_int_arg(arguments: Mapping[str, JSONValue], name: str) -> int | None:
+    """Read one optional integer argument.
+
+    读取一个可选整数参数。
+    """
     value = arguments.get(name)
     if value is None:
         return None
@@ -1051,6 +1207,10 @@ def _optional_int_arg(arguments: Mapping[str, JSONValue], name: str) -> int | No
 
 
 def _optional_float_arg(arguments: Mapping[str, JSONValue], name: str) -> float | None:
+    """Read one optional numeric argument as a float.
+
+    将一个可选数值参数读取为浮点数。
+    """
     value = arguments.get(name)
     if value is None:
         return None
@@ -1060,6 +1220,10 @@ def _optional_float_arg(arguments: Mapping[str, JSONValue], name: str) -> float 
 
 
 def _prepare_edit_arguments(arguments: Mapping[str, JSONValue]) -> Mapping[str, JSONValue]:
+    """Normalize legacy and JSON-string edit arguments into canonical edits.
+
+    将旧式和 JSON 字符串编辑参数规范化为标准 edits。
+    """
     prepared = dict(arguments)
     edits_value = prepared.get("edits")
     if isinstance(edits_value, str):
@@ -1082,6 +1246,10 @@ def _prepare_edit_arguments(arguments: Mapping[str, JSONValue]) -> Mapping[str, 
 
 
 def _edits_arg(arguments: Mapping[str, JSONValue]) -> list[dict[str, str]]:
+    """Validate and return the canonical list of exact text replacements.
+
+    校验并返回标准精确文本替换列表。
+    """
     value = arguments.get("edits")
     if not isinstance(value, list) or not value:
         raise ToolInputError(
@@ -1103,6 +1271,10 @@ def _edits_arg(arguments: Mapping[str, JSONValue]) -> list[dict[str, str]]:
 
 
 def _validate_non_overlapping(spans: list[tuple[int, int, str]]) -> None:
+    """Reject edit spans that overlap in the original file.
+
+    拒绝在原始文件中重叠的编辑范围。
+    """
     previous_end = -1
     for start, end, _new_text in sorted(spans):
         if start < previous_end:
@@ -1111,6 +1283,10 @@ def _validate_non_overlapping(spans: list[tuple[int, int, str]]) -> None:
 
 
 def _count_occurrences(content: str, text: str) -> int:
+    """Count non-overlapping exact occurrences in text.
+
+    统计文本中不重叠的精确出现次数。
+    """
     count = 0
     start = 0
     while True:
@@ -1122,10 +1298,18 @@ def _count_occurrences(content: str, text: str) -> int:
 
 
 def _strip_bom(content: str) -> tuple[str, str]:
+    """Remove and return an optional UTF-8 BOM prefix.
+
+    移除并返回可选的 UTF-8 BOM 前缀。
+    """
     return (UTF8_BOM, content[1:]) if content.startswith(UTF8_BOM) else ("", content)
 
 
 def _not_found_error(path: str, edit_index: int, total_edits: int) -> str:
+    """Build a precise error for an exact edit target that was not found.
+
+    为未找到的精确编辑目标构建明确错误。
+    """
     if total_edits == 1:
         return (
             f"Could not find the exact text in {path}. The old text must match exactly "
@@ -1138,6 +1322,10 @@ def _not_found_error(path: str, edit_index: int, total_edits: int) -> str:
 
 
 def _duplicate_error(path: str, edit_index: int, total_edits: int, occurrences: int) -> str:
+    """Build a precise error for a non-unique edit target.
+
+    为不唯一的编辑目标构建明确错误。
+    """
     if total_edits == 1:
         return (
             f"Found {occurrences} occurrences of the text in {path}. The text must be unique. "
@@ -1150,12 +1338,20 @@ def _duplicate_error(path: str, edit_index: int, total_edits: int, occurrences: 
 
 
 def _empty_old_text_error(path: str, edit_index: int, total_edits: int) -> str:
+    """Build an error for an empty exact-match edit target.
+
+    为精确匹配编辑目标为空构建错误。
+    """
     if total_edits == 1:
         return f"oldText must not be empty in {path}."
     return f"edits[{edit_index}].oldText must not be empty in {path}."
 
 
 def _no_change_error(path: str, total_edits: int) -> str:
+    """Build an error when validated replacements produce identical content.
+
+    当已校验替换产生相同内容时构建错误。
+    """
     if total_edits == 1:
         return (
             f"No changes made to {path}. The replacement produced identical content. "
@@ -1166,14 +1362,23 @@ def _no_change_error(path: str, total_edits: int) -> str:
 
 
 def _base64_text(data: bytes) -> str:
+    """Encode binary data as ASCII base64 text.
+
+    将二进制数据编码为 ASCII Base64 文本。
+    """
     import base64
 
     return base64.b64encode(data).decode("ascii")
 
 
 def _kill_process_tree(process: asyncio.subprocess.Process) -> None:
+    """Terminate a subprocess and its process group when supported.
+
+    在平台支持时终止子进程及其进程组。
+    """
     if os.name == "posix":
         # `getattr` keeps mypy happy on the Windows stubs (see issue #513).
+        # `getattr` 用于满足 Windows 类型桩上的 mypy 检查（见 issue #513）。
         killpg = getattr(os, "killpg")  # noqa: B009
         sigkill = getattr(signal, "SIGKILL")  # noqa: B009
         try:
@@ -1188,6 +1393,10 @@ def _kill_process_tree(process: asyncio.subprocess.Process) -> None:
 
 
 def _write_temp_output(output: str) -> str:
+    """Persist full truncated command output to a temporary file.
+
+    将完整的截断命令输出持久化到临时文件。
+    """
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
@@ -1200,19 +1409,39 @@ def _write_temp_output(output: str) -> str:
 
 
 class _FileLockContext:
+    """Async context manager serializing mutations of one file path.
+
+    串行化单个文件路径变更的异步上下文管理器。
+    """
     def __init__(self, path: Path) -> None:
+        """Bind the context manager to one normalized file path.
+
+        将上下文管理器绑定到一个规范化文件路径。
+        """
         self._path = path.resolve()
         self._lock: asyncio.Lock | None = None
 
     async def __aenter__(self) -> None:
+        """Acquire the process-local lock for the file path.
+
+        获取文件路径的进程本地锁。
+        """
         lock = _file_locks.setdefault(self._path, asyncio.Lock())
         self._lock = lock
         await lock.acquire()
 
     async def __aexit__(self, _exc_type: object, _exc: object, _tb: object) -> None:
+        """Release the process-local file lock.
+
+        释放进程本地文件锁。
+        """
         if self._lock is not None:
             self._lock.release()
 
 
 def _file_lock(path: Path) -> _FileLockContext:
+    """Return an async lock context for one file path.
+
+    返回一个文件路径的异步锁上下文。
+    """
     return _FileLockContext(path)

@@ -1,4 +1,7 @@
-"""Provider-neutral streaming events emitted by model adapters."""
+"""Provider-neutral streaming events emitted by model adapters.
+
+模型适配器发出的、与提供者无关的流式事件。
+"""
 
 from __future__ import annotations
 
@@ -12,7 +15,10 @@ from tau_agent.types import JSONValue
 
 
 class ProviderResponseStartEvent(BaseModel):
-    """The provider has started a model response."""
+    """The provider has started a model response.
+
+    模型提供者已开始生成响应。
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -22,7 +28,10 @@ class ProviderResponseStartEvent(BaseModel):
 
 
 class ProviderRetryEvent(BaseModel):
-    """The provider adapter is retrying a transient request failure."""
+    """The provider adapter is retrying a transient request failure.
+
+    模型提供者适配器正在重试暂时性的请求失败。
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -35,7 +44,10 @@ class ProviderRetryEvent(BaseModel):
 
 
 class ProviderTextDeltaEvent(BaseModel):
-    """A streamed text fragment from the provider."""
+    """A streamed text fragment from the provider.
+
+    模型提供者流式返回的一段文本。
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -44,7 +56,10 @@ class ProviderTextDeltaEvent(BaseModel):
 
 
 class ProviderThinkingDeltaEvent(BaseModel):
-    """A streamed thinking/reasoning fragment from the provider."""
+    """A streamed thinking/reasoning fragment from the provider.
+
+    模型提供者流式返回的一段思考或推理内容。
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -53,7 +68,10 @@ class ProviderThinkingDeltaEvent(BaseModel):
 
 
 class ProviderToolCallEvent(BaseModel):
-    """A complete tool call requested by the model."""
+    """A complete tool call requested by the model.
+
+    模型请求的一次完整工具调用。
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -62,7 +80,10 @@ class ProviderToolCallEvent(BaseModel):
 
 
 class ProviderResponseEndEvent(BaseModel):
-    """The provider has completed a model response."""
+    """The provider has completed a model response.
+
+    模型提供者已完成响应。
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -72,7 +93,10 @@ class ProviderResponseEndEvent(BaseModel):
 
 
 class ProviderErrorEvent(BaseModel):
-    """A provider-level error that can be surfaced by the agent layer."""
+    """A provider-level error that can be surfaced by the agent layer.
+
+    可由代理层向上传递的模型提供者级错误。
+    """
 
     model_config = ConfigDict(extra="forbid")
 

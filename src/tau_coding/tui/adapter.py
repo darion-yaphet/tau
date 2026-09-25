@@ -1,4 +1,7 @@
-"""Translate Pi-compatible session events into Textual display state."""
+"""Translate Pi-compatible session events into Textual display state.
+
+将兼容 Pi 的会话事件转换为 Textual 显示状态。
+"""
 
 from tau_agent.events import (
     AgentEndEvent,
@@ -26,6 +29,10 @@ from tau_coding.tui.state import TuiState, _is_file_mutation_only_message
 
 class TuiEventAdapter:
     def __init__(self, state: TuiState) -> None:
+        """Bind the adapter to mutable TUI display state.
+
+        将适配器绑定到可变 TUI 显示状态。
+        """
         self.state = state
         self._assistant_start_item_index: int | None = None
         self._pending_overflow_error: AssistantMessage | None = None
@@ -33,17 +40,23 @@ class TuiEventAdapter:
         self._file_mutation_continuation_calls: set[str] = set()
 
     def apply(self, event: CodingSessionEvent) -> None:
+        """Apply one coding-session event to the current display state.
+
+        将一个编码会话事件应用到当前显示状态。
+        """
         if isinstance(event, AgentStartEvent):
             self.state.running = True
             self.state.error = None
             return
         if isinstance(event, AgentEndEvent):
             # A bare harness event is terminal for legacy/direct adapter callers.
+            # 对旧版或直接适配器调用方而言，裸 harness 事件是终止事件。
             self._flush()
             self.state.running = False
             return
         if isinstance(event, SessionAgentEndEvent):
             # Session orchestration may still compact, retry, or drain queued work.
+            # 会话编排仍可能执行压缩、重试或清空排队工作。
             self._flush()
             return
         if event.type == "agent_settled":
@@ -81,6 +94,7 @@ class TuiEventAdapter:
             elif isinstance(message, AssistantMessage):
                 # Replace provisional delta rows with the final canonical
                 # message so persisted block boundaries and ordering win.
+                # 使用最终规范消息替换临时增量行，使持久化块边界和顺序优先。
                 start = self._assistant_start_item_index
                 if start is not None:
                     del self.state.items[start:]
@@ -88,10 +102,12 @@ class TuiEventAdapter:
                     if is_context_overflow_error(message):
                         # Keep the provider failure provisional while session-level
                         # overflow compaction and retry are still in progress.
+                        # 会话级溢出压缩和重试仍在进行时，将提供商故障保持为临时状态。
                         self._pending_overflow_error = message
                     else:
                         # Successful overflow compaction makes the retry failure the
                         # only terminal error worth presenting.
+                        # 溢出压缩成功后，重试故障成为唯一值得展示的终止错误。
                         self._pending_overflow_error = None
                         self.state.add_assistant_error(message)
                         self.state.running = False
@@ -152,6 +168,10 @@ class TuiEventAdapter:
             self.state.add_item("status", f"… {event.error_message}")
 
     def _flush(self) -> None:
+        """Notify the UI that accumulated state changes are ready to render.
+
+        通知 UI 已可渲染累计的状态变更。
+        """
         if self.state.assistant_buffer:
             self.state.add_item("assistant", self.state.assistant_buffer)
             self.state.assistant_buffer = ""

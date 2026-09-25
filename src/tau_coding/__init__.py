@@ -1,4 +1,7 @@
-"""Tau coding-agent application package."""
+"""Tau coding-agent application package.
+
+Tau 编码代理应用程序包。
+"""
 
 from __future__ import annotations
 

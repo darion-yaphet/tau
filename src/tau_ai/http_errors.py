@@ -1,4 +1,7 @@
-"""Helpers for surfacing safe provider HTTP error details."""
+"""Helpers for surfacing safe provider HTTP error details.
+
+用于呈现安全的提供商 HTTP 错误详情的辅助函数。
+"""
 
 from __future__ import annotations
 
@@ -16,7 +19,10 @@ def provider_http_error_message(
     body: str,
     model: str | None = None,
 ) -> str:
-    """Return an actionable, secret-free HTTP error message for a provider response."""
+    """Return an actionable, secret-free HTTP error message for a provider response.
+
+    为提供商响应返回可操作且不包含敏感信息的 HTTP 错误消息。
+    """
     prefix = f"{provider_name} request failed with status {status_code}"
     if model:
         prefix = f"{prefix} for model {model}"
@@ -27,7 +33,10 @@ def provider_http_error_message(
 
 
 def provider_http_error_detail(body: str) -> str:
-    """Extract a concise provider-supplied error detail from an HTTP body."""
+    """Extract a concise provider-supplied error detail from an HTTP body.
+
+    从 HTTP 响应正文中提取简洁的提供商错误详情。
+    """
     parsed = _loads_object(body)
     if parsed is not None:
         detail = provider_error_detail_from_mapping(parsed)
@@ -37,7 +46,10 @@ def provider_http_error_detail(body: str) -> str:
 
 
 def provider_error_detail_from_mapping(value: Mapping[str, Any]) -> str:
-    """Return the most useful message/code from a provider error object."""
+    """Return the most useful message/code from a provider error object.
+
+    从提供商错误对象中返回最有用的消息或代码。
+    """
     error = value.get("error")
     if isinstance(error, Mapping):
         message = error.get("message")
@@ -57,6 +69,9 @@ def provider_error_detail_from_mapping(value: Mapping[str, Any]) -> str:
     return ""
 
 
+# Parse a JSON string only when its top-level value is an object.
+
+# 仅当 JSON 字符串的顶层值是对象时才返回解析结果。
 def _loads_object(value: str) -> Mapping[str, Any] | None:
     try:
         parsed = loads(value)

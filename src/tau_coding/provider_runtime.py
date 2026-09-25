@@ -1,4 +1,7 @@
-"""Runtime provider construction for Tau coding sessions."""
+"""Runtime provider construction for Tau coding sessions.
+
+为 Tau 编码会话构建运行时提供商。
+"""
 
 from __future__ import annotations
 
@@ -64,10 +67,16 @@ from tau_coding.thinking import ThinkingLevel, normalize_thinking_level, reasoni
 
 
 class ClosableModelProvider(ModelProvider, Protocol):
-    """Runtime provider object Tau owns and can close."""
+    """Runtime provider object Tau owns and can close.
+
+    表示由 Tau 持有且可关闭的运行时提供商对象。
+    """
 
     async def aclose(self) -> None:
-        """Close any provider-owned resources."""
+        """Close any provider-owned resources.
+
+        关闭由提供商持有的所有资源。
+        """
         ...
 
 
@@ -80,9 +89,14 @@ async def create_dynamic_model_provider(
 ) -> ClosableModelProvider:
     """Create a candidate runtime from a process-local provider definition.
 
+    根据进程内的提供商定义创建候选运行时。
+
     Authentication is resolved only here, immediately before construction.
     This path never converts or writes the dynamic definition to durable
     ``ProviderConfig`` settings.
+
+    身份认证只在此处、即构建前一刻解析。此路径绝不会将动态定义
+    转换或写入持久化的 ``ProviderConfig`` 设置。
     """
     selected_model = _dynamic_model(provider, model)
     auth = await _resolve_dynamic_runtime_auth(
@@ -97,10 +111,14 @@ async def create_dynamic_model_provider(
         try:
             stream_response = getattr(runtime, "stream_response", None)
         except BaseException:  # noqa: BLE001 - extension object validation boundary
+
+            # 扩展对象的校验边界。
             stream_response = None
         try:
             close = getattr(runtime, "aclose", None)
         except BaseException:  # noqa: BLE001 - extension object validation boundary
+
+            # 扩展对象的校验边界。
             close = None
         if not callable(stream_response) or not callable(close):
             error = ProviderConfigError(
@@ -112,6 +130,8 @@ async def create_dynamic_model_provider(
                     if isawaitable(close_result):
                         await close_result
                 except BaseException:  # noqa: BLE001 - preserve the validation error
+
+                    # 保留原始校验错误。
                     pass
             raise error
         return runtime
@@ -152,6 +172,9 @@ async def create_dynamic_model_provider(
         omit_authorization_header=auth.omit_authorization_header,
         # Dynamic providers explicitly own their API choice. A local model id
         # resembling gpt-* or *codex* must not reroute to /responses.
+
+        # 动态提供商明确拥有自己的 API 选择权。类似 gpt-* 或 *codex* 的
+        # 本地模型标识不得被重新路由到 /responses。
         infer_api_from_model=False,
     )
     return OpenAICompatibleProvider(config, client=transport.client)
@@ -163,7 +186,10 @@ async def _resolve_dynamic_runtime_auth(
     credentials: CredentialReader,
     environment: Mapping[str, str],
 ) -> ResolvedProviderAuth:
-    """Resolve extension auth behind a categorical secret-safe boundary."""
+    """Resolve extension auth behind a categorical secret-safe boundary.
+
+    在按类别隔离且保护机密信息的边界内解析扩展认证。
+    """
     try:
         return await resolve_provider_auth(
             provider.auth,
@@ -173,21 +199,34 @@ async def _resolve_dynamic_runtime_auth(
     except asyncio.CancelledError:
         # Keep cancellation semantics without retaining an extension-authored
         # cancellation message that could contain credential material.
+
+        # 保留取消语义，但不保留扩展生成的取消消息，因为其中可能包含凭据材料。
         raise asyncio.CancelledError from None
     except _MissingRequiredApiKeyError:
         # Preserve only Tau's exact strategy and host-authored missing-key error.
+
+        # 仅保留 Tau 的精确策略以及由宿主生成的缺少密钥错误。
         if type(provider.auth) is RequiredApiKey:
             raise
         raise ProviderAuthError("Dynamic provider authentication resolution failed") from None
     except ProviderAuthError:
         # Custom strategies can raise ProviderAuthError too, so their arbitrary
         # text crosses the same categorical boundary as any extension exception.
+
+        # 自定义策略也可能抛出 ProviderAuthError，因此其中的任意文本与其他
+        # 扩展异常一样，都必须经过相同的类别边界。
         raise ProviderAuthError("Dynamic provider authentication resolution failed") from None
     except BaseException:  # noqa: BLE001 - extension authentication boundary
+
+        # 扩展认证边界。
         raise ProviderAuthError("Dynamic provider authentication resolution failed") from None
 
 
 def _dynamic_model(provider: DynamicProvider, model: str) -> ProviderModel:
+    """Find the requested dynamic model or raise a provider configuration error.
+
+    查找请求的动态模型；若未配置，则抛出提供商配置错误。
+    """
     for candidate in provider.models:
         if candidate.id == model:
             return candidate
@@ -195,7 +234,10 @@ def _dynamic_model(provider: DynamicProvider, model: str) -> ProviderModel:
 
 
 def _merge_dynamic_headers(*values: Mapping[str, str]) -> dict[str, str]:
-    """Merge transport/model/auth headers case-insensitively, latest value winning."""
+    """Merge transport/model/auth headers case-insensitively, latest value winning.
+
+    以不区分大小写的方式合并传输层、模型和认证请求头，并以最后的值为准。
+    """
     merged: dict[str, str] = {}
     names: dict[str, str] = {}
     for value in values:
@@ -218,7 +260,15 @@ def create_model_provider(
     inference_provider: str | None = None,
     response_headers_observer: Callable[[Mapping[str, str]], None] | None = None,
 ) -> ClosableModelProvider:
-    """Create a runtime model provider from durable provider settings."""
+    """Create a runtime model provider from durable provider settings.
+
+    根据持久化的提供商设置创建运行时模型提供商。
+    """
+    # Core flow: validate the selection, resolve stored credentials, construct the
+    # protocol-specific configuration, then instantiate the matching provider.
+
+    # 核心流程：校验所选配置，解析已存储凭据，构建对应协议的配置，
+    # 然后实例化匹配的提供商。
     if model is not None:
         validate_provider_model(provider, model)
     if inference_provider is not None:
@@ -332,6 +382,9 @@ def create_model_provider(
                 supports_images=compatible_config.supports_images,
                 # Resolved from compat like the first-party path, so a gateway
                 # proxying real Claude can opt back in per provider or per model.
+
+                # 与第一方路径一样从 compat 解析，因此代理真实 Claude 的网关
+                # 可以按提供商或按模型重新启用该能力。
                 cache_retention=gateway_retention,
                 cache_control_on_tools=gateway_cache_control_on_tools,
             )
@@ -350,6 +403,10 @@ def _codex_reasoning_effort(
     model: str | None,
     thinking_level: ThinkingLevel | None,
 ) -> str | None:
+    """Map a validated Tau thinking level to Codex reasoning effort.
+
+    将校验后的 Tau 思考级别映射为 Codex 推理强度。
+    """
     if thinking_level is None or provider.thinking_parameter != "reasoning.effort":
         return None
     levels = provider_thinking_levels(provider, model=model)
@@ -371,7 +428,10 @@ def _codex_reasoning_effort(
 
 
 class OpenAICodexCredentialResolver:
-    """Resolve and refresh OpenAI Codex OAuth credentials for one request."""
+    """Resolve and refresh OpenAI Codex OAuth credentials for one request.
+
+    为单次请求解析并刷新 OpenAI Codex OAuth 凭据。
+    """
 
     def __init__(
         self,
@@ -379,11 +439,18 @@ class OpenAICodexCredentialResolver:
         *,
         credential_store: FileCredentialStore,
     ) -> None:
+        """Bind a Codex provider configuration to its credential store.
+
+        将 Codex 提供商配置与其凭据存储绑定。
+        """
         self._provider = provider
         self._credential_store = credential_store
 
     async def __call__(self) -> OpenAICodexCredentials:
-        """Return a valid Codex access token and account id."""
+        """Return a valid Codex access token and account id.
+
+        返回有效的 Codex 访问令牌和账户标识。
+        """
         credential_name = self._provider.credential_name
         if credential_name:
             credential = self._credential_store.get_oauth(credential_name)
@@ -413,6 +480,10 @@ class OpenAICodexCredentialResolver:
         credential_name: str,
         credential: OAuthCredential,
     ) -> OAuthCredential:
+        """Refresh an expired Codex credential once under its per-loop lock.
+
+        在对应事件循环的锁保护下，仅刷新一次已过期的 Codex 凭据。
+        """
         if not oauth_credential_is_expired(credential):
             return credential
         async with _refresh_lock(credential_name):
@@ -431,6 +502,8 @@ _REFRESH_LOCKS: MutableMapping[AbstractEventLoop, dict[str, asyncio.Lock]] = Wea
 def _refresh_lock(credential_name: str) -> asyncio.Lock:
     """Return this loop's refresh lock for one stored credential.
 
+    返回当前事件循环中某个已存储凭据对应的刷新锁。
+
     Providers rotate the refresh token on use: the old one dies the moment a
     refresh succeeds. A session issues provider calls concurrently (the agent
     loop and session auto-naming, for two), so without serialization several
@@ -440,10 +513,21 @@ def _refresh_lock(credential_name: str) -> asyncio.Lock:
     race that caused it. Holding this lock across the network call, and
     re-reading the store inside it, keeps a token spent at most once.
 
+    提供商会在使用刷新令牌时轮换它：刷新成功后，旧令牌立即失效。一个会话会
+    并发发起提供商调用（例如代理循环和会话自动命名），若不进行串行化，多个
+    任务会读取同一个过期凭据并消耗同一个刷新令牌。其中一个任务成功，其余任务
+    收到 400 错误，而最后落盘的写入甚至可能留下已被取代的令牌，导致下一次运行
+    才失败，远晚于实际竞争发生的时间。让此锁覆盖网络调用，并在锁内重新读取存储，
+    可以确保每个令牌最多只被消耗一次。
+
     Locks are cached per event loop because ``asyncio.Lock`` binds to the
     running loop on first contention: a lock cached across loops appears to
     work — the uncontended path never touches the loop — until two tasks
     contend it in a later loop and it raises.
+
+    锁按事件循环缓存，因为 ``asyncio.Lock`` 会在第一次发生竞争时绑定到正在运行的
+    循环。跨循环缓存的锁看似可用，是因为无竞争路径不会访问循环；直到后续循环中
+    两个任务竞争该锁时，它才会抛出异常。
     """
     locks = _REFRESH_LOCKS.setdefault(get_running_loop(), {})
     lock = locks.get(credential_name)
@@ -457,13 +541,20 @@ def _oauth_credential(
     provider: ProviderConfig,
     credential_store: FileCredentialStore,
 ) -> OAuthCredential | None:
+    """Read the configured OAuth credential when the provider supports OAuth.
+
+    当提供商支持 OAuth 时，读取其配置的 OAuth 凭据。
+    """
     if provider.credential_name is None or get_oauth_provider(provider.name) is None:
         return None
     return credential_store.get_oauth(provider.credential_name)
 
 
 class OAuthRuntimeCredentialResolver:
-    """Refresh provider-neutral OAuth credentials immediately before a request."""
+    """Refresh provider-neutral OAuth credentials immediately before a request.
+
+    在请求发出前一刻刷新与提供商无关的 OAuth 凭据。
+    """
 
     def __init__(
         self,
@@ -471,10 +562,18 @@ class OAuthRuntimeCredentialResolver:
         *,
         credential_store: FileCredentialStore,
     ) -> None:
+        """Bind a provider configuration to the credential store used at runtime.
+
+        将提供商配置与运行时使用的凭据存储绑定。
+        """
         self._provider = provider
         self._credential_store = credential_store
 
     async def __call__(self) -> RuntimeProviderAuth:
+        """Refresh stored OAuth state and return request-ready runtime auth.
+
+        刷新已存储的 OAuth 状态，并返回可直接用于请求的运行时认证信息。
+        """
         credential_name = self._provider.credential_name
         if credential_name is None:
             raise RuntimeError(f"Provider {self._provider.name} has no credential name")
@@ -482,6 +581,9 @@ class OAuthRuntimeCredentialResolver:
         async with _refresh_lock(credential_name):
             # Read inside the lock: a task that waited here while another
             # refreshed sees the rotated credential and skips its own refresh.
+
+            # 在锁内读取：若一个任务在此等待期间另一个任务完成了刷新，它将看到
+            # 轮换后的凭据，从而跳过自己的刷新操作。
             credential = self._credential_store.get_oauth(credential_name)
             if credential is None:
                 raise RuntimeError(
@@ -500,6 +602,10 @@ class OAuthRuntimeCredentialResolver:
 
 
 def _required_oauth_provider(provider_name: str) -> OAuthProvider:
+    """Return a registered OAuth implementation or fail with provider context.
+
+    返回已注册的 OAuth 实现；若不存在，则附带提供商上下文报错。
+    """
     oauth_provider = get_oauth_provider(provider_name)
     if oauth_provider is None:
         raise RuntimeError(f"No OAuth implementation is registered for {provider_name}")

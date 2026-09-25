@@ -1,4 +1,7 @@
-"""Event renderers for Tau coding frontends and print modes."""
+"""Event renderers for Tau coding frontends and print modes.
+
+Tau 编码前端和打印模式使用的事件渲染器。
+"""
 
 from __future__ import annotations
 
@@ -14,7 +17,10 @@ def create_event_renderer(
     *,
     custom_message_renderer: CustomMessageMarkup | None = None,
 ) -> EventRenderer:
-    """Create a renderer for a print output mode."""
+    """Create a renderer for a print output mode.
+
+    为打印输出模式创建渲染器。
+    """
     if mode is PrintOutputMode.text:
         return FinalTextRenderer()
     if mode is PrintOutputMode.json:

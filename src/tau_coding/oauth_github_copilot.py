@@ -1,4 +1,7 @@
-"""GitHub Copilot OAuth device-code provider."""
+"""GitHub Copilot OAuth device-code provider.
+
+GitHub Copilot OAuth 设备代码提供商。
+"""
 
 from __future__ import annotations
 
@@ -36,7 +39,10 @@ GITHUB_COPILOT_HEADERS = {
 
 @dataclass(frozen=True, slots=True)
 class GitHubDeviceCode:
-    """Validated GitHub device authorization response."""
+    """Validated GitHub device authorization response.
+
+    已校验的 GitHub 设备授权响应。
+    """
 
     device_code: str
     user_code: str
@@ -46,7 +52,10 @@ class GitHubDeviceCode:
 
 
 def normalize_github_domain(value: str) -> str | None:
-    """Normalize a GitHub Enterprise URL/domain to a hostname."""
+    """Normalize a GitHub Enterprise URL/domain to a hostname.
+
+    将 GitHub Enterprise URL 或域名规范化为主机名。
+    """
     stripped = value.strip()
     if not stripped:
         return None
@@ -57,7 +66,10 @@ def normalize_github_domain(value: str) -> str | None:
 
 
 def github_copilot_base_url(token: str | None, enterprise_domain: str | None = None) -> str:
-    """Derive the Copilot API URL encoded in a short-lived Copilot token."""
+    """Derive the Copilot API URL encoded in a short-lived Copilot token.
+
+    从短期 Copilot 令牌中派生其编码的 Copilot API URL。
+    """
     if token:
         for field in token.split(";"):
             key, separator, value = field.partition("=")
@@ -75,7 +87,10 @@ async def login_github_copilot(
     client: httpx.AsyncClient | None = None,
     cancel_event: asyncio.Event | None = None,
 ) -> OAuthCredential:
-    """Run GitHub's device flow and exchange its token for Copilot auth."""
+    """Run GitHub's device flow and exchange its token for Copilot auth.
+
+    运行 GitHub 设备流程，并将其令牌交换为 Copilot 认证信息。
+    """
     domain_input = await callbacks.on_prompt(
         OAuthPrompt(
             message="GitHub Enterprise URL/domain (blank for github.com)",
@@ -129,7 +144,10 @@ async def refresh_github_copilot_token(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> OAuthCredential:
-    """Exchange a long-lived GitHub token for a short-lived Copilot token."""
+    """Exchange a long-lived GitHub token for a short-lived Copilot token.
+
+    将长期 GitHub 令牌交换为短期 Copilot 令牌。
+    """
     enterprise_domain = oauth_metadata_string(credential.metadata, "enterprise_domain")
     domain = enterprise_domain or "github.com"
     owns_client = client is None
@@ -262,7 +280,10 @@ def _required_string(raw: dict[str, Any], name: str, label: str) -> str:
 
 
 class GitHubCopilotOAuthProvider:
-    """Registered GitHub Copilot OAuth behavior."""
+    """Registered GitHub Copilot OAuth behavior.
+
+    已注册的 GitHub Copilot OAuth 行为。
+    """
 
     id = GITHUB_COPILOT_OAUTH_PROVIDER
     name = "GitHub Copilot"

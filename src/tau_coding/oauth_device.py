@@ -1,4 +1,7 @@
-"""RFC 8628-style device authorization polling helpers."""
+"""RFC 8628-style device authorization polling helpers.
+
+RFC 8628 风格的设备授权轮询辅助工具。
+"""
 
 from __future__ import annotations
 
@@ -16,7 +19,10 @@ DevicePollStatus = Literal["complete", "pending", "slow_down", "failed"]
 
 @dataclass(frozen=True, slots=True)
 class DevicePollResult[T]:
-    """Result of one device-token polling request."""
+    """Result of one device-token polling request.
+
+    单次设备令牌轮询请求的结果。
+    """
 
     status: DevicePollStatus
     value: T | None = None
@@ -34,7 +40,10 @@ async def poll_oauth_device_code[T](
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     monotonic: Callable[[], float] = time.monotonic,
 ) -> T:
-    """Poll an OAuth device flow with RFC 8628 timing and cancellation."""
+    """Poll an OAuth device flow with RFC 8628 timing and cancellation.
+
+    按 RFC 8628 的计时与取消规则轮询 OAuth 设备流程。
+    """
     interval = _poll_interval(interval_seconds)
     deadline = monotonic() + expires_in_seconds if expires_in_seconds is not None else math.inf
     if wait_before_first_poll:
@@ -68,6 +77,10 @@ async def poll_oauth_device_code[T](
 
 
 def _poll_interval(value: float | None) -> float:
+    """Normalize a provider polling interval to a safe positive value.
+
+    将提供商轮询间隔规范化为安全的正值。
+    """
     if value is None or not math.isfinite(value) or value <= 0:
         return 5
     return max(value, 1)
@@ -79,6 +92,10 @@ async def _wait(
     *,
     sleep: Callable[[float], Awaitable[None]],
 ) -> None:
+    """Wait for a delay while honoring an optional cancellation event.
+
+    等待指定时长，同时响应可选的取消事件。
+    """
     _raise_if_cancelled(cancel_event)
     if seconds <= 0:
         return
@@ -87,6 +104,10 @@ async def _wait(
         return
 
     async def run_sleep() -> None:
+        """Run the injected sleep callback as a supervised task.
+
+        将注入的休眠回调作为受监管任务运行。
+        """
         await sleep(seconds)
 
     sleep_task: asyncio.Task[None] = asyncio.create_task(run_sleep())
@@ -105,5 +126,9 @@ async def _wait(
 
 
 def _raise_if_cancelled(cancel_event: asyncio.Event | None) -> None:
+    """Raise an OAuth cancellation error when cancellation was requested.
+
+    收到取消请求时抛出 OAuth 取消错误。
+    """
     if cancel_event is not None and cancel_event.is_set():
         raise OAuthError("Login cancelled")

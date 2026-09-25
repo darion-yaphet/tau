@@ -1,4 +1,7 @@
-"""Model-assisted summaries for abandoned session-tree branches."""
+"""Model-assisted summaries for abandoned session-tree branches.
+
+借助模型为已放弃的会话树分支生成摘要。
+"""
 
 from __future__ import annotations
 
@@ -73,7 +76,10 @@ async def summarize_branch_messages_with_model(
     custom_instructions: str | None = None,
     replace_instructions: bool = False,
 ) -> tuple[str, Usage, str | None] | None:
-    """Return a generated summary, usage, and resolved provider, or None on failure."""
+    """Return a generated summary, usage, and resolved provider, or None on failure.
+
+    返回生成的摘要、用量和已解析的提供者；失败时返回 None。
+    """
     if not messages:
         return None
 
@@ -117,6 +123,10 @@ def _branch_summary_prompt(
     custom_instructions: str | None = None,
     replace_instructions: bool = False,
 ) -> str:
+    """Build the model prompt from the branch transcript and optional instructions.
+
+    根据分支记录和可选指令构建模型提示词。
+    """
     conversation = _serialize_branch_conversation(messages)
     if replace_instructions and custom_instructions:
         instructions = custom_instructions
@@ -128,6 +138,10 @@ def _branch_summary_prompt(
 
 
 def _serialize_branch_conversation(messages: Sequence[AgentMessage]) -> str:
+    """Serialize branch messages within the configured source-size limit.
+
+    在配置的源内容大小限制内序列化分支消息。
+    """
     parts: list[str] = []
     remaining_chars = MAX_SUMMARY_SOURCE_TOTAL_CHARS
     omitted_count = 0
@@ -147,6 +161,10 @@ def _serialize_branch_conversation(messages: Sequence[AgentMessage]) -> str:
 
 
 def _format_summary_source_message(message: AgentMessage) -> str:
+    """Format one agent message for inclusion in the summary source.
+
+    格式化一条代理消息，以便纳入摘要源内容。
+    """
     match message:
         case UserMessage():
             return f"[User]: {_trim_summary_source_text(message.text)}"
@@ -161,6 +179,10 @@ def _format_summary_source_message(message: AgentMessage) -> str:
 
 
 def _format_assistant_summary_source(message: AssistantMessage) -> str:
+    """Format assistant text and tool calls for summary generation.
+
+    格式化助手文本和工具调用，以供生成摘要。
+    """
     parts: list[str] = []
     content = _trim_summary_source_text(message.text)
     if content != "(empty)":
@@ -175,6 +197,10 @@ def _format_assistant_summary_source(message: AssistantMessage) -> str:
 
 
 def _format_tool_call_arguments(arguments: Mapping[str, object]) -> str:
+    """Render tool-call arguments in a stable key order.
+
+    按稳定的键顺序渲染工具调用参数。
+    """
     return ", ".join(
         f"{key}={json.dumps(value, sort_keys=True)}" for key, value in sorted(arguments.items())
     )
@@ -185,6 +211,10 @@ def _trim_summary_source_text(
     *,
     max_chars: int = MAX_SUMMARY_SOURCE_MESSAGE_CHARS,
 ) -> str:
+    """Normalize and truncate source text to the requested character limit.
+
+    规范化源文本，并按指定字符限制截断。
+    """
     normalized = text.strip() or "(empty)"
     if len(normalized) <= max_chars:
         return normalized
@@ -193,6 +223,10 @@ def _trim_summary_source_text(
 
 
 def _add_branch_summary_context(summary: str, messages: Sequence[AgentMessage]) -> str:
+    """Attach file-operation context to a generated branch summary.
+
+    将文件操作上下文附加到生成的分支摘要中。
+    """
     read_files, modified_files = _branch_file_operations(messages)
     sections = [BRANCH_SUMMARY_PREAMBLE + summary]
     if read_files:
@@ -205,6 +239,10 @@ def _add_branch_summary_context(summary: str, messages: Sequence[AgentMessage]) 
 
 
 def _branch_file_operations(messages: Sequence[AgentMessage]) -> tuple[list[str], list[str]]:
+    """Collect files read and modified by tool calls on the branch.
+
+    收集分支上的工具调用所读取和修改的文件。
+    """
     read: set[str] = set()
     modified: set[str] = set()
     for message in messages:

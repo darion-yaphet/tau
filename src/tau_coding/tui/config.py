@@ -1,4 +1,7 @@
-"""Durable Textual TUI configuration for Tau."""
+"""Durable Textual TUI configuration for Tau.
+
+Tau 的持久化 Textual TUI 配置。
+"""
 
 from __future__ import annotations
 
@@ -43,12 +46,18 @@ __all__ = [
 
 
 class TuiConfigError(ValueError):
-    """Raised when Tau TUI configuration is invalid."""
+    """Raised when Tau TUI configuration is invalid.
+
+    Tau TUI 配置无效时抛出的异常。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class TuiKeybindings:
-    """Configurable keys for Tau's built-in Textual frontend."""
+    """Configurable keys for Tau's built-in Textual frontend.
+
+    Tau 内置 Textual 前端的可配置按键。
+    """
 
     cancel: str = "escape"
     command_palette: str = "ctrl+k"
@@ -67,7 +76,10 @@ class TuiKeybindings:
     quit: str = "ctrl+d"
 
     def to_json(self) -> dict[str, str]:
-        """Serialize these keybindings to JSON-compatible data."""
+        """Serialize these keybindings to JSON-compatible data.
+
+        将这些按键绑定序列化为 JSON 兼容数据。
+        """
         return {
             "cancel": self.cancel,
             "command_palette": self.command_palette,
@@ -89,7 +101,10 @@ class TuiKeybindings:
 
 @dataclass(frozen=True, slots=True)
 class TuiSettings:
-    """Tau TUI settings loaded from Tau home."""
+    """Tau TUI settings loaded from Tau home.
+
+    从 Tau 主目录加载的 TUI 设置。
+    """
 
     keybindings: TuiKeybindings = field(default_factory=TuiKeybindings)
     theme: TuiThemeName = "tau-dark"
@@ -98,7 +113,10 @@ class TuiSettings:
     turn_notification: TurnNotificationMode = "desktop"
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize these settings to JSON-compatible data."""
+        """Serialize these settings to JSON-compatible data.
+
+        将这些设置序列化为 JSON 兼容数据。
+        """
         return {
             "auto_copy_selection": self.auto_copy_selection,
             "keybindings": self.keybindings.to_json(),
@@ -109,7 +127,10 @@ class TuiSettings:
 
     @property
     def resolved_theme(self) -> TuiTheme:
-        """Return the selected theme, falling back to tau-dark when unknown."""
+        """Return the selected theme, falling back to tau-dark when unknown.
+
+        返回所选主题，未知时回退到 tau-dark。
+        """
         try:
             return get_tui_theme(self.theme)
         except KeyError:
@@ -117,12 +138,18 @@ class TuiSettings:
 
 
 def tui_settings_path(paths: TauPaths | None = None) -> Path:
-    """Return the durable TUI settings path."""
+    """Return the durable TUI settings path.
+
+    返回持久化 TUI 设置路径。
+    """
     return (paths or TauPaths()).home / "tui.json"
 
 
 def load_tui_settings(paths: TauPaths | None = None) -> TuiSettings:
-    """Load durable TUI settings, falling back to built-in defaults."""
+    """Load durable TUI settings, falling back to built-in defaults.
+
+    加载持久化 TUI 设置，缺失时回退到内置默认值。
+    """
     path = tui_settings_path(paths)
     if not path.exists():
         return TuiSettings()
@@ -133,7 +160,10 @@ def load_tui_settings(paths: TauPaths | None = None) -> TuiSettings:
 
 
 def save_tui_settings(settings: TuiSettings, paths: TauPaths | None = None) -> Path:
-    """Persist durable TUI settings and return the written path."""
+    """Persist durable TUI settings and return the written path.
+
+    持久化 TUI 设置并返回写入路径。
+    """
     path = tui_settings_path(paths)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dumps(settings.to_json(), indent=2) + "\n", encoding="utf-8")
@@ -141,10 +171,15 @@ def save_tui_settings(settings: TuiSettings, paths: TauPaths | None = None) -> P
 
 
 def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
-    """Parse TUI settings from JSON-compatible data."""
+    """Parse TUI settings from JSON-compatible data.
+
+    从 JSON 兼容数据解析 TUI 设置。
+    """
     # Ignore settings added by newer Tau versions so sharing this user-level
     # file across upgrades, downgrades, and multiple installations cannot block
     # TUI startup. Recognized settings remain strictly validated below.
+    # 忽略较新 Tau 版本添加的设置，使跨升级、降级和多个安装共享此用户级文件时不会
+    # 阻止 TUI 启动。下方仍会严格校验已识别的设置。
     keybindings_data = data.get("keybindings", {})
     if not isinstance(keybindings_data, dict):
         raise TuiConfigError("TUI keybindings must be a JSON object")
@@ -171,15 +206,24 @@ def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
 
 
 def _bool_setting(value: object, field_name: str) -> bool:
+    """Validate and return one boolean TUI setting.
+
+    校验并返回一个布尔型 TUI 设置。
+    """
     if isinstance(value, bool):
         return value
     raise TuiConfigError(f"TUI setting must be a boolean: {field_name}")
 
 
 def _keybindings_from_json(data: dict[str, Any]) -> TuiKeybindings:
+    """Parse known keybinding actions from JSON-compatible data.
+
+    从 JSON 兼容数据解析已知按键绑定动作。
+    """
     defaults = TuiKeybindings()
     # Future versions may add actions to this nested object. Read only actions
     # this version understands, just as the top-level settings parser does.
+    # 未来版本可能向此嵌套对象添加动作。与顶层设置解析器一样，只读取当前版本理解的动作。
     values = {
         field_name: _key_string(data.get(field_name, default_value), field_name)
         for field_name, default_value in defaults.to_json().items()
@@ -189,18 +233,30 @@ def _keybindings_from_json(data: dict[str, Any]) -> TuiKeybindings:
 
 
 def _key_string(value: object, field_name: str) -> str:
+    """Validate and normalize one keybinding string.
+
+    校验并规范化一个按键绑定字符串。
+    """
     if not isinstance(value, str) or not value.strip():
         raise TuiConfigError(f"TUI keybinding must be a non-empty string: {field_name}")
     return value.strip()
 
 
 def _theme_name(value: object) -> TuiThemeName:
+    """Validate and normalize a configured theme name.
+
+    校验并规范化配置的主题名称。
+    """
     if not isinstance(value, str) or not value.strip():
         raise TuiConfigError("TUI theme must be a non-empty string")
     return value.strip()
 
 
 def _reject_duplicate_keys(values: dict[str, str]) -> None:
+    """Reject keybindings that assign one key to multiple actions.
+
+    拒绝将同一按键分配给多个动作的按键绑定。
+    """
     key_to_action: dict[str, str] = {}
     for action, key in values.items():
         previous_action = key_to_action.get(key)

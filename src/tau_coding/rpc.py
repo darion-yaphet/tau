@@ -1,4 +1,7 @@
-"""Pi-compatible JSONL RPC frontend for a Tau coding session."""
+"""Pi-compatible JSONL RPC frontend for a Tau coding session.
+
+Tau 编码会话的 Pi 兼容 JSONL RPC 前端。
+"""
 
 from __future__ import annotations
 
@@ -38,64 +41,127 @@ _MAX_RECORD_BYTES = 16 * 1024 * 1024
 
 
 class RpcSession(Protocol):
-    """Public CodingSession surface consumed by RPC mode."""
+    """Public CodingSession surface consumed by RPC mode.
+
+    RPC 模式使用的公开 CodingSession 接口。
+    """
 
     @property
+    # Return the active model name.
+    #
+    # 返回活动模型名称。
     def model(self) -> str: ...
 
     @property
+    # Return the active provider name.
+    #
+    # 返回活动提供者名称。
     def provider_name(self) -> str: ...
 
     @property
+    # Return the active thinking level.
+    #
+    # 返回活动思考等级。
     def thinking_level(self) -> str: ...
 
     @property
+    # Return thinking levels supported by the active model.
+    #
+    # 返回活动模型支持的思考等级。
     def available_thinking_levels(self) -> tuple[str, ...]: ...
 
     @property
+    # Return provider and model choices visible to RPC clients.
+    #
+    # 返回 RPC 客户端可见的提供者和模型选项。
     def available_model_choices(self) -> tuple[ModelChoice, ...]: ...
 
+    # Return configured metadata for a provider.
+    #
+    # 返回提供者的配置元数据。
     def provider_config(self, provider_name: str) -> ProviderConfig | None: ...
 
     @property
+    # Return the current transcript messages.
+    #
+    # 返回当前会话记录消息。
     def messages(self) -> tuple[object, ...]: ...
 
     @property
+    # Return the durable session id when indexed.
+    #
+    # 返回已索引会话的持久标识符。
     def session_id(self) -> str | None: ...
 
     @property
+    # Return the indexed human-readable session title.
+    #
+    # 返回已索引的易读会话标题。
     def session_title(self) -> str | None: ...
 
     @property
+    # Return the session manager when available.
+    #
+    # 返回可用的会话管理器。
     def session_manager(self) -> SessionManager | None: ...
 
     @property
+    # Return the backing session storage.
+    #
+    # 返回底层会话存储。
     def storage(self) -> object: ...
 
     @property
+    # Return the automatic compaction threshold.
+    #
+    # 返回自动压缩阈值。
     def auto_compact_token_threshold(self) -> int | None: ...
 
     @property
+    # Return whether automatic compaction is enabled.
+    #
+    # 返回是否已启用自动压缩。
     def auto_compaction_enabled(self) -> bool: ...
 
     @property
+    # Return the active context window size.
+    #
+    # 返回活动上下文窗口大小。
     def context_window_tokens(self) -> int: ...
 
     @property
+    # Return the current context token estimate.
+    #
+    # 返回当前上下文令牌估算值。
     def context_token_estimate(self) -> int: ...
 
     @property
+    # Return the number of queued user messages.
+    #
+    # 返回已排队用户消息的数量。
     def queued_message_count(self) -> int: ...
 
     @property
+    # Return cumulative statistics for the active branch.
+    #
+    # 返回活动分支的累计统计信息。
     def session_stats(self) -> SessionStats: ...
 
     @property
+    # Return the slash-command registry.
+    #
+    # 返回斜杠命令注册表。
     def command_registry(self) -> CommandRegistry: ...
 
     @property
+    # Return the current durable session state.
+    #
+    # 返回当前持久化会话状态。
     def state(self) -> object: ...
 
+    # Stream a user prompt through the coding session.
+    #
+    # 通过编码会话流式执行用户提示词。
     def prompt(
         self,
         content: str,
@@ -103,45 +169,96 @@ class RpcSession(Protocol):
         streaming_behavior: Literal["steer", "follow_up"] | None = None,
     ) -> AsyncIterator[CodingSessionEvent]: ...
 
+    # Cancel the active agent turn.
+    #
+    # 取消活动代理轮次。
     def cancel(self) -> None: ...
 
+    # Select an explicit provider and model pair.
+    #
+    # 选择显式的提供者和模型组合。
     def set_model_choice(self, choice: ModelChoice) -> None: ...
 
+    # Cycle to and persist the next thinking level.
+    #
+    # 循环切换并持久化下一个思考等级。
     async def cycle_thinking_level(self) -> str: ...
 
+    # Set and persist an explicit thinking level.
+    #
+    # 设置并持久化显式思考等级。
     async def set_thinking_level(self, level: str) -> str: ...
 
+    # Enable or disable automatic compaction.
+    #
+    # 启用或禁用自动压缩。
     def set_auto_compaction_enabled(self, enabled: bool) -> None: ...
 
+    # Run manual compaction and return its structured result.
+    #
+    # 执行手动压缩并返回结构化结果。
     async def compact_detailed(self, instructions: str | None = None) -> ManualCompactionResult: ...
 
+    # Replace the active state with a new session.
+    #
+    # 使用新会话替换活动状态。
     async def new_session(self) -> str: ...
 
+    # Resume an indexed durable session.
+    #
+    # 恢复已索引的持久化会话。
     async def resume(self, session_id: str) -> str: ...
 
+    # Return append-only durable session entries.
+    #
+    # 返回仅追加的持久化会话条目。
     async def session_entries(self) -> tuple[SessionEntry, ...]: ...
 
+    # Return branchable choices for the session tree.
+    #
+    # 返回会话树中的可分支选项。
     async def tree_choices(self) -> tuple[object, ...]: ...
 
+    # Move the active branch to the selected entry.
+    #
+    # 将活动分支移动到选定条目。
     async def branch_to_entry(self, entry_id: str) -> object: ...
 
+    # Export the current session to a user-facing artifact.
+    #
+    # 将当前会话导出为面向用户的产物。
     async def export(
         self, destination: Path | None = None, *, format: str | None = None
     ) -> Path: ...
 
+    # Run a terminal command and optionally attach its output to context.
+    #
+    # 运行终端命令，并可选择将输出附加到上下文。
     async def run_terminal_command(
         self, command: str, *, add_to_context: bool
     ) -> TerminalCommandResult: ...
 
+    # Persist a new human-readable session name.
+    #
+    # 持久化新的易读会话名称。
     async def set_session_name(self, name: str) -> str: ...
 
+    # Emit the deferred session-start lifecycle event.
+    #
+    # 发出延迟的会话启动生命周期事件。
     async def emit_pending_session_start(self) -> None: ...
 
+    # Close all resources owned by the session.
+    #
+    # 关闭会话拥有的全部资源。
     async def aclose(self) -> None: ...
 
 
 class RpcServer:
-    """Read Pi-style commands and stream responses/events as strict JSONL."""
+    """Read Pi-style commands and stream responses/events as strict JSONL.
+
+    读取 Pi 风格命令，并以严格 JSONL 流式输出响应和事件。
+    """
 
     def __init__(
         self,
@@ -150,6 +267,10 @@ class RpcServer:
         stdin: IO[str] | None = None,
         stdout: IO[str] | None = None,
     ) -> None:
+        """Initialize the RPC server around one coding session and byte streams.
+
+        使用一个编码会话和字节流初始化 RPC 服务器。
+        """
         self._session = session
         self._stdin = stdin or sys.stdin
         self._stdout = stdout or sys.stdout
@@ -157,7 +278,10 @@ class RpcServer:
         self._active_prompt_tasks = 0
 
     async def run(self) -> None:
-        """Serve commands until stdin reaches EOF."""
+        """Serve commands until stdin reaches EOF.
+
+        持续处理命令，直到标准输入到达文件末尾。
+        """
         await self._session.emit_pending_session_start()
         async with anyio.create_task_group() as tasks:
             while True:
@@ -187,6 +311,10 @@ class RpcServer:
         await self._session.aclose()
 
     async def _dispatch(self, command: dict[str, object], tasks: anyio.abc.TaskGroup) -> None:
+        """Validate and dispatch one decoded RPC command.
+
+        验证并分派一条已解码的 RPC 命令。
+        """
         request_id = command.get("id")
         command_type = command.get("type")
         if not isinstance(command_type, str):
@@ -497,6 +625,10 @@ class RpcServer:
         stream: AsyncIterator[CodingSessionEvent],
         first_event: CodingSessionEvent,
     ) -> None:
+        """Stream one prompt request and report its terminal response.
+
+        流式执行一次提示词请求并报告最终响应。
+        """
         try:
             await self._write(first_event)
             async for event in stream:
@@ -514,6 +646,10 @@ class RpcServer:
         *,
         include_data: bool = False,
     ) -> None:
+        """Write a successful RPC response envelope.
+
+        写入成功的 RPC 响应封装。
+        """
         response: dict[str, object] = {
             "type": "response",
             "command": command,
@@ -526,6 +662,10 @@ class RpcServer:
         await self._write(response)
 
     async def _error(self, request_id: object, command: str, error: str) -> None:
+        """Write a failed RPC response envelope.
+
+        写入失败的 RPC 响应封装。
+        """
         response: dict[str, object] = {
             "type": "response",
             "command": command,
@@ -537,6 +677,10 @@ class RpcServer:
         await self._write(response)
 
     async def _write(self, value: object) -> None:
+        """Serialize and atomically write one JSONL value.
+
+        序列化并原子写入一条 JSONL 值。
+        """
         payload = json.dumps(_jsonable(value), ensure_ascii=False, separators=(",", ":"))
         async with self._write_lock:
             self._stdout.write(payload + "\n")
@@ -544,6 +688,10 @@ class RpcServer:
 
 
 def _required_string(command: Mapping[str, object], key: str) -> str:
+    """Read a required non-empty string command field.
+
+    读取必需的非空字符串命令字段。
+    """
     value = command.get(key)
     if not isinstance(value, str) or not value:
         raise ValueError(f"{key} must be a non-empty string")
@@ -551,6 +699,10 @@ def _required_string(command: Mapping[str, object], key: str) -> str:
 
 
 def _required_bool(command: Mapping[str, object], key: str) -> bool:
+    """Read a required boolean command field.
+
+    读取必需的布尔命令字段。
+    """
     value = command.get(key)
     if not isinstance(value, bool):
         raise ValueError(f"{key} must be a boolean")
@@ -558,6 +710,10 @@ def _required_bool(command: Mapping[str, object], key: str) -> bool:
 
 
 def _optional_string(command: Mapping[str, object], key: str) -> str | None:
+    """Read an optional string command field.
+
+    读取可选的字符串命令字段。
+    """
     value = command.get(key)
     if value is None:
         return None
@@ -567,10 +723,18 @@ def _optional_string(command: Mapping[str, object], key: str) -> str | None:
 
 
 def _leaf_id(state: object) -> object:
+    """Extract the active leaf id from an opaque session state.
+
+    从不透明的会话状态中提取活动叶节点标识符。
+    """
     return getattr(state, "active_leaf_id", None)
 
 
 def _model_wire(session: RpcSession, *, choice: ModelChoice | None = None) -> dict[str, JSONValue]:
+    """Serialize active or selected model metadata for RPC output.
+
+    序列化活动或选定模型的元数据以供 RPC 输出。
+    """
     selected = choice or ModelChoice(provider_name=session.provider_name, model=session.model)
     provider = session.provider_config(selected.provider_name)
     metadata = provider.model_metadata.get(selected.model) if provider is not None else None
@@ -633,11 +797,19 @@ def _model_wire(session: RpcSession, *, choice: ModelChoice | None = None) -> di
 
 
 def _session_file(session: RpcSession) -> str | None:
+    """Return the session storage file path when available.
+
+    在可用时返回会话存储文件路径。
+    """
     storage = session.storage
     return str(storage.path) if isinstance(storage, JsonlSessionStorage) else None
 
 
 def _session_stats_wire(session: RpcSession) -> dict[str, JSONValue]:
+    """Serialize current session statistics for RPC output.
+
+    序列化当前会话统计信息以供 RPC 输出。
+    """
     stats = session.session_stats
     user_messages = sum(isinstance(message, UserMessage) for message in session.messages)
     assistant_messages = sum(isinstance(message, AssistantMessage) for message in session.messages)
@@ -678,6 +850,10 @@ def _session_stats_wire(session: RpcSession) -> dict[str, JSONValue]:
 
 
 def _entry_wire(entry: SessionEntry, provider_name: str) -> dict[str, JSONValue] | None:
+    """Serialize one supported session entry for RPC output.
+
+    序列化一个受支持的会话条目以供 RPC 输出。
+    """
     if entry.type == "leaf":
         return None
     timestamp = datetime.fromtimestamp(entry.timestamp, tz=UTC)
@@ -742,6 +918,10 @@ def _entry_wire(entry: SessionEntry, provider_name: str) -> dict[str, JSONValue]
 
 
 def _tree_wire(entries: tuple[SessionEntry, ...], provider_name: str) -> list[JSONValue]:
+    """Serialize session entries as a nested RPC tree.
+
+    将会话条目序列化为嵌套的 RPC 树。
+    """
     visible = tuple(entry for entry in entries if entry.type != "leaf")
     children: dict[str | None, list[SessionEntry]] = {}
     ids = {entry.id for entry in visible}
@@ -750,6 +930,10 @@ def _tree_wire(entries: tuple[SessionEntry, ...], provider_name: str) -> list[JS
         children.setdefault(parent, []).append(entry)
 
     def build(entry: SessionEntry) -> dict[str, JSONValue]:
+        """Recursively build one serialized tree node.
+
+        递归构建一个序列化树节点。
+        """
         projected = _entry_wire(entry, provider_name)
         if projected is None:
             raise AssertionError("Leaf entries must be filtered before tree projection")
@@ -762,6 +946,10 @@ def _tree_wire(entries: tuple[SessionEntry, ...], provider_name: str) -> list[JS
 
 
 def _resolve_session_id(session: RpcSession, reference: str) -> str:
+    """Resolve a session reference to a durable session id.
+
+    将会话引用解析为持久化会话标识符。
+    """
     manager = session.session_manager
     if manager is None:
         raise ValueError("Session manager is not available")
@@ -776,6 +964,10 @@ def _resolve_session_id(session: RpcSession, reference: str) -> str:
 
 
 def _jsonable(value: object) -> JSONValue:
+    """Convert supported Python values into JSON-compatible values.
+
+    将受支持的 Python 值转换为兼容 JSON 的值。
+    """
     if isinstance(value, BaseModel):
         return cast(JSONValue, value.model_dump(mode="json", by_alias=True))
     if is_dataclass(value) and not isinstance(value, type):
@@ -795,5 +987,8 @@ def _jsonable(value: object) -> JSONValue:
 
 
 async def run_rpc_session(session: CodingSession) -> None:
-    """Run RPC mode for an already configured CodingSession."""
+    """Run RPC mode for an already configured CodingSession.
+
+    为已配置的 CodingSession 运行 RPC 模式。
+    """
     await RpcServer(session).run()

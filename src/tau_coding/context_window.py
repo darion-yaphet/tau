@@ -1,4 +1,7 @@
-"""Approximate context-size estimation for Tau coding sessions."""
+"""Approximate context-size estimation for Tau coding sessions.
+
+Tau 编码会话的近似上下文大小估算。
+"""
 
 from __future__ import annotations
 
@@ -108,7 +111,10 @@ TURN_PREFIX_SUMMARIZATION_PROMPT = (
 
 @dataclass(frozen=True, slots=True)
 class ContextUsageEstimate:
-    """Best available context-size accounting for one provider request."""
+    """Best available context-size accounting for one provider request.
+
+    单次提供商请求可获得的最佳上下文大小核算结果。
+    """
 
     total_tokens: int
     system_tokens: int
@@ -121,19 +127,28 @@ class ContextUsageEstimate:
 
     @property
     def uses_provider_usage(self) -> bool:
-        """Return whether a provider-reported usage block anchors this estimate."""
+        """Return whether a provider-reported usage block anchors this estimate.
+
+        返回此估算是否以提供商报告的用量块为基准。
+        """
         return self.provider_tokens > 0
 
 
 def estimate_text_tokens(text: str) -> int:
-    """Return a deterministic rough token estimate for text."""
+    """Return a deterministic rough token estimate for text.
+
+    返回文本的确定性粗略令牌估算。
+    """
     if not text:
         return 0
     return max(1, (len(text) + CHARS_PER_TOKEN - 1) // CHARS_PER_TOKEN)
 
 
 def estimate_message_tokens(message: AgentMessage) -> int:
-    """Return a rough token estimate for one provider-neutral message."""
+    """Return a rough token estimate for one provider-neutral message.
+
+    返回一条提供商无关消息的粗略令牌估算。
+    """
     tokens = MESSAGE_OVERHEAD_TOKENS + estimate_text_tokens(message_text(message))
     if isinstance(message, AssistantMessage):
         tokens += sum(
@@ -151,7 +166,10 @@ def estimate_message_tokens(message: AgentMessage) -> int:
 
 
 def estimate_tool_tokens(tool: AgentTool) -> int:
-    """Return a rough token estimate for one tool definition."""
+    """Return a rough token estimate for one tool definition.
+
+    返回一个工具定义的粗略令牌估算。
+    """
     return (
         TOOL_OVERHEAD_TOKENS
         + estimate_text_tokens(tool.name)
@@ -166,19 +184,28 @@ def estimate_context_tokens(
     messages: tuple[AgentMessage, ...],
     tools: tuple[AgentTool, ...],
 ) -> int:
-    """Return a rough estimate of the active provider context size."""
+    """Return a rough estimate of the active provider context size.
+
+    返回当前提供商上下文大小的粗略估算。
+    """
     return estimate_context_usage(system=system, messages=messages, tools=tools).total_tokens
 
 
 def auto_compaction_threshold_for_context_window(context_window_tokens: int) -> int | None:
-    """Return Pi-style automatic compaction threshold for a model context window."""
+    """Return Pi-style automatic compaction threshold for a model context window.
+
+    返回模型上下文窗口的 Pi 风格自动压缩阈值。
+    """
     if context_window_tokens <= 0:
         return None
     return max(1, context_window_tokens - DEFAULT_COMPACTION_RESERVE_TOKENS)
 
 
 def provider_context_tokens(message: AssistantMessage) -> int:
-    """Return the provider-reported context represented by an assistant response."""
+    """Return the provider-reported context represented by an assistant response.
+
+    返回助手响应所表示的提供商报告上下文。
+    """
     usage = message.usage
     return usage.total_tokens or (usage.input + usage.output + usage.cache_read + usage.cache_write)
 
@@ -263,7 +290,10 @@ def estimate_context_usage(
 
 
 def summarize_messages_for_compaction(messages: tuple[AgentMessage, ...]) -> str:
-    """Build a deterministic compact summary from provider-neutral messages."""
+    """Build a deterministic compact summary from provider-neutral messages.
+
+    从提供商无关消息构建确定性的紧凑摘要。
+    """
     if not messages:
         return "No prior messages."
     lines = [f"Automatically compacted {len(messages)} prior message(s)."]
@@ -278,7 +308,10 @@ def build_compaction_summary_prompt(
     *,
     custom_instructions: str | None = None,
 ) -> str:
-    """Build the model prompt Tau uses to summarize compacted history."""
+    """Build the model prompt Tau uses to summarize compacted history.
+
+    构建 Tau 用于总结压缩历史的模型提示词。
+    """
     previous_summary, new_messages = _split_previous_compaction_summary(messages)
     conversation = serialize_messages_for_compaction(new_messages)
     prompt = f"<conversation>\n{conversation}\n</conversation>\n\n"
@@ -297,7 +330,10 @@ def build_compaction_summary_prompt(
 
 
 def serialize_messages_for_compaction(messages: tuple[AgentMessage, ...]) -> str:
-    """Serialize provider-neutral messages for the compaction summarizer."""
+    """Serialize provider-neutral messages for the compaction summarizer.
+
+    为压缩摘要器序列化提供商无关消息。
+    """
     if not messages:
         return "(no new messages)"
 
@@ -320,6 +356,10 @@ def serialize_messages_for_compaction(messages: tuple[AgentMessage, ...]) -> str
 
 
 def _message_text(message: AgentMessage) -> str:
+    """Extract normalized text from one provider-neutral message.
+
+    从一条提供商无关消息中提取规范化文本。
+    """
     text = message_text(message)
     if isinstance(message, AssistantMessage) and message.tool_calls:
         names = ", ".join(call.name for call in message.tool_calls)
@@ -331,6 +371,10 @@ def _message_text(message: AgentMessage) -> str:
 
 
 def _truncate_summary_text(text: str) -> str:
+    """Collapse and bound text included in a deterministic summary.
+
+    折叠并限制确定性摘要中包含的文本。
+    """
     collapsed = " ".join(text.split())
     if len(collapsed) <= SUMMARY_MESSAGE_CHAR_LIMIT:
         return collapsed

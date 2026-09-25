@@ -1,4 +1,7 @@
-"""Persisted runtime refresh for the models.dev catalog snapshot."""
+"""Persisted runtime refresh for the models.dev catalog snapshot.
+
+models.dev 目录快照的持久化运行时刷新。
+"""
 
 from __future__ import annotations
 
@@ -29,11 +32,18 @@ MODELS_REFRESH_TIMEOUT_SECONDS = 15.0
 
 
 class ModelsDevRefreshError(RuntimeError):
-    """Raised when a forced/runtime catalog refresh cannot complete."""
+    """Raised when a forced/runtime catalog refresh cannot complete.
+
+    强制或运行时目录刷新无法完成时抛出的异常。
+    """
 
 
 @dataclass(frozen=True, slots=True)
 class ModelsDevRefreshResult:
+    """Outcome metadata for one models.dev catalog refresh.
+
+    单次 models.dev 目录刷新的结果元数据。
+    """
     refreshed: bool
     not_modified: bool
     model_count: int
@@ -41,13 +51,20 @@ class ModelsDevRefreshResult:
 
 
 def models_store_path(paths: TauPaths | None = None) -> Path:
+    """Return the persisted models.dev catalog cache path.
+
+    返回持久化 models.dev 目录缓存路径。
+    """
     return (paths or TauPaths()).models_store_path
 
 
 def cached_models_dev_catalog_document(
     paths: TauPaths | None = None,
 ) -> dict[str, Any] | None:
-    """Return a valid cache only when it is newer than the bundled snapshot."""
+    """Return a valid cache only when it is newer than the bundled snapshot.
+
+    仅当有效缓存比内置快照更新时返回它。
+    """
     cache = _read_cache(paths)
     if cache is None:
         return None
@@ -60,6 +77,10 @@ def cached_models_dev_catalog_document(
 
 
 def cached_models_dev_catalog_overlay(paths: TauPaths | None = None) -> dict[str, Any] | None:
+    """Return the cached catalog as a validated provider overlay.
+
+    将缓存目录作为已校验的提供商覆盖返回。
+    """
     document = cached_models_dev_catalog_document(paths)
     return models_dev_catalog_overlay(document) if document is not None else None
 
@@ -71,7 +92,10 @@ async def refresh_models_dev_catalog(
     client: httpx.AsyncClient | None = None,
     now: float | None = None,
 ) -> ModelsDevRefreshResult:
-    """Refresh models.dev plus Pi's NVIDIA filter and atomically cache the result."""
+    """Refresh models.dev plus Pi's NVIDIA filter and atomically cache the result.
+
+    刷新 models.dev 及 Pi 的 NVIDIA 过滤结果，并原子缓存结果。
+    """
     resolved_paths = paths or TauPaths()
     path = models_store_path(resolved_paths)
     current_time = now if now is not None else time.time()
@@ -123,6 +147,7 @@ async def refresh_models_dev_catalog(
         nvidia_source = nvidia_response.json()
 
         # Imported here to avoid a catalog-loader import cycle during package startup.
+        # 在此导入以避免包启动期间出现目录加载器循环导入。
         from tau_coding.catalog_loader import builtin_source_catalog
 
         document = models_dev_catalog_document(
@@ -132,6 +157,7 @@ async def refresh_models_dev_catalog(
             generated_at=int(current_time * 1000),
         )
         # Validate before persistence so malformed upstream data cannot poison startup.
+        # 持久化前先校验，避免格式错误的上游数据破坏启动过程。
         models_dev_catalog_overlay(document)
         cache_document: dict[str, Any] = {
             "schema_version": MODELS_STORE_SCHEMA_VERSION,
@@ -154,6 +180,10 @@ async def refresh_models_dev_catalog(
 
 
 def _read_cache(paths: TauPaths | None) -> dict[str, Any] | None:
+    """Read and validate a models.dev cache document.
+
+    读取并校验 models.dev 缓存文档。
+    """
     path = models_store_path(paths)
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -173,6 +203,10 @@ def _read_cache(paths: TauPaths | None) -> dict[str, Any] | None:
 
 
 def _model_count(document: dict[str, Any]) -> int:
+    """Count models across all valid provider tables in a catalog document.
+
+    统计目录文档中所有有效提供商表的模型数量。
+    """
     providers = document.get("providers")
     if not isinstance(providers, dict):
         return 0
@@ -184,6 +218,10 @@ def _model_count(document: dict[str, Any]) -> int:
 
 
 def _write_cache(path: Path, value: dict[str, Any]) -> None:
+    """Atomically write a validated models.dev cache document.
+
+    原子写入已校验的 models.dev 缓存文档。
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path: Path | None = None
     try:

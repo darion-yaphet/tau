@@ -1,4 +1,7 @@
-"""Thinking-mode primitives for Tau coding sessions."""
+"""Thinking-mode primitives for Tau coding sessions.
+
+Tau 编码会话的思考模式基础组件。
+"""
 
 from __future__ import annotations
 
@@ -32,7 +35,10 @@ THINKING_LEVEL_DESCRIPTIONS: dict[ThinkingLevel, str] = {
 
 
 def normalize_thinking_level(value: str | None) -> ThinkingLevel:
-    """Return a valid Tau thinking level or raise a user-facing error."""
+    """Return a valid Tau thinking level or raise a user-facing error.
+
+    返回有效的 Tau 思考等级，否则抛出面向用户的错误。
+    """
     if value is None:
         return DEFAULT_THINKING_LEVEL
     normalized = value.strip().lower()
@@ -43,7 +49,10 @@ def normalize_thinking_level(value: str | None) -> ThinkingLevel:
 
 
 def normalize_thinking_levels(values: Sequence[str]) -> tuple[ThinkingLevel, ...]:
-    """Return a validated, duplicate-free thinking level tuple."""
+    """Return a validated, duplicate-free thinking level tuple.
+
+    返回经过验证且不含重复项的思考等级元组。
+    """
     if isinstance(values, str) or not values:
         allowed = ", ".join(THINKING_LEVELS)
         raise ValueError(f"Thinking modes must be a non-empty list. Available modes: {allowed}")
@@ -55,7 +64,10 @@ def normalize_thinking_levels(values: Sequence[str]) -> tuple[ThinkingLevel, ...
 
 
 def reasoning_effort_for_level(level: str | None) -> ReasoningEffort:
-    """Map Tau's UI thinking level to an OpenAI-compatible reasoning effort."""
+    """Map Tau's UI thinking level to an OpenAI-compatible reasoning effort.
+
+    将 Tau 界面的思考等级映射为兼容 OpenAI 的推理强度。
+    """
     normalized = normalize_thinking_level(level)
     if normalized == "off":
         return "none"
@@ -63,7 +75,10 @@ def reasoning_effort_for_level(level: str | None) -> ReasoningEffort:
 
 
 def anthropic_thinking_budget_for_level(level: str | None) -> int | None:
-    """Map Tau's UI thinking level to Anthropic extended-thinking tokens."""
+    """Map Tau's UI thinking level to Anthropic extended-thinking tokens.
+
+    将 Tau 界面的思考等级映射为 Anthropic 扩展思考令牌数。
+    """
     normalized = normalize_thinking_level(level)
     if normalized == "off":
         return None
@@ -82,7 +97,10 @@ def next_thinking_level(
     *,
     available: tuple[ThinkingLevel, ...] = THINKING_LEVELS,
 ) -> ThinkingLevel:
-    """Return the next thinking level in a stable cycle."""
+    """Return the next thinking level in a stable cycle.
+
+    按稳定循环顺序返回下一个思考等级。
+    """
     if not available:
         return DEFAULT_THINKING_LEVEL
     try:

@@ -1,4 +1,7 @@
-"""Command-line entry point for Tau."""
+"""Command-line entry point for Tau.
+
+Tau 的命令行入口。
+"""
 
 from __future__ import annotations
 
@@ -79,7 +82,10 @@ from tau_coding.version import current_version as _current_version
 
 
 def _is_utf8_encoding(encoding: str | None) -> bool:
-    """Return whether a stream encoding name represents UTF-8."""
+    """Return whether a stream encoding name represents UTF-8.
+
+    返回流编码名称是否表示 UTF-8。
+    """
     if encoding is None:
         return False
     return encoding.lower().replace("-", "").replace("_", "") == "utf8"
@@ -88,9 +94,14 @@ def _is_utf8_encoding(encoding: str | None) -> bool:
 def _force_utf8_streams() -> None:
     """Reconfigure stdout/stderr to UTF-8 when they are not already UTF-8.
 
+    当标准输出或标准错误尚非 UTF-8 时，将其重新配置为 UTF-8。
+
     Windows consoles default these streams to the system codepage (e.g.
     cp1252), which raises UnicodeEncodeError on model output containing
     characters outside that codepage.
+
+    Windows 控制台默认使用系统代码页，例如 cp1252；当模型输出包含该代码页
+    之外的字符时，这会引发 UnicodeEncodeError。
     """
     for stream in (sys.stdout, sys.stderr):
         if _is_utf8_encoding(getattr(stream, "encoding", None)):
@@ -124,12 +135,18 @@ app = typer.Typer(
 
 
 def providers_command() -> None:
-    """List configured model providers."""
+    """List configured model providers.
+
+    列出已配置的模型提供者。
+    """
     render_provider_settings(load_provider_settings(), credential_reader=FileCredentialStore())
 
 
 def install_command(args: list[str]) -> None:
-    """Install an extension into Tau's user extension directory."""
+    """Install an extension into Tau's user extension directory.
+
+    将扩展安装到 Tau 的用户扩展目录。
+    """
     source: str | None = None
     force = False
     for arg in args:
@@ -168,7 +185,10 @@ def setup_command(
     max_retry_delay_seconds: float = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS,
     set_default: bool = True,
 ) -> None:
-    """Create or update an OpenAI-compatible provider entry."""
+    """Create or update an OpenAI-compatible provider entry.
+
+    创建或更新兼容 OpenAI 的提供者条目。
+    """
     settings = load_provider_settings()
     provider = OpenAICompatibleProviderConfig(
         name=provider_name,
@@ -382,7 +402,10 @@ def main(
         typer.Option("--models", help="With `tau update`, refresh model catalogs only."),
     ] = False,
 ) -> None:
-    """Run the Tau CLI."""
+    """Run the Tau CLI.
+
+    运行 Tau 命令行界面。
+    """
     current_version = _current_version()
     if version:
         typer.echo(f"tau {current_version}")
@@ -647,7 +670,10 @@ async def run_openai_tui(
     *,
     thinking_level_override: ThinkingLevel | None = None,
 ) -> str | None:
-    """Run the Textual TUI and return its resumable session id, if any."""
+    """Run the Textual TUI and return its resumable session id, if any.
+
+    运行 Textual TUI，并在存在时返回可恢复的会话标识符。
+    """
     release_notes_notice = startup_release_notes_notice(_current_version())
     startup_notices = (release_notes_notice.message,) if release_notes_notice is not None else ()
     return await run_tui_app(
@@ -671,13 +697,24 @@ async def run_openai_tui(
 
 
 def _startup_update_notice() -> UpdateNotice | None:
+    """Return a non-blocking update notice when a newer Tau version is known.
+
+    当发现较新的 Tau 版本时返回非阻塞更新提示。
+    """
     return startup_update_notice(_current_version())
 
 
 def update_models_command() -> None:
-    """Force-refresh and persist the runtime model catalog."""
+    """Force-refresh and persist the runtime model catalog.
+
+    强制刷新并持久化运行时模型目录。
+    """
 
     async def refresh() -> ModelsDevRefreshResult:
+        """Refresh model catalogs through the development refresh workflow.
+
+        通过开发刷新流程更新模型目录。
+        """
         return await refresh_models_dev_catalog(force=True)
 
     try:
@@ -692,7 +729,10 @@ def update_models_command() -> None:
 
 
 def update_command() -> None:
-    """Upgrade Tau using the installer that manages the current environment."""
+    """Upgrade Tau using the installer that manages the current environment.
+
+    使用管理当前环境的安装器升级 Tau。
+    """
     result = update_tau()
     if not result.succeeded:
         typer.echo("Could not safely update Tau:", err=True)
@@ -710,7 +750,10 @@ def update_command() -> None:
 
 
 def render_session_list(records: list[CodingSessionRecord]) -> None:
-    """Render indexed sessions for the CLI."""
+    """Render indexed sessions for the CLI.
+
+    为命令行界面渲染已索引会话。
+    """
     if not records:
         typer.echo("No sessions found.")
         return
@@ -726,7 +769,10 @@ async def export_session_command(
     export_format: str | None = None,
     session_manager: SessionManager | None = None,
 ) -> Path:
-    """Export an indexed session id or JSONL file path."""
+    """Export an indexed session id or JSONL file path.
+
+    导出指定索引会话标识符或 JSONL 文件路径。
+    """
     session_path, title = _resolve_export_source(session_ref, session_manager)
     entries = await JsonlSessionStorage(session_path).read_all()
     normalized_format = normalize_export_format(
@@ -747,7 +793,10 @@ async def export_session_command(
 
 
 def _run_export_cli(args: list[str]) -> None:
-    """Run `tau export`/`tau --export` and exit."""
+    """Run `tau export`/`tau --export` and exit.
+
+    运行 `tau export` 或 `tau --export` 后退出。
+    """
     try:
         session_ref, output_path, export_format = _parse_export_cli_args(args)
     except RuntimeError as exc:
@@ -766,7 +815,10 @@ def _run_export_cli(args: list[str]) -> None:
 
 
 def _resolve_prompt_input(value: str, *, option: str) -> str:
-    """Resolve an existing UTF-8 file, otherwise preserve literal prompt text."""
+    """Resolve an existing UTF-8 file, otherwise preserve literal prompt text.
+
+    解析现有 UTF-8 文件，否则保留原始提示词文本。
+    """
     try:
         path = Path(value).expanduser()
     except RuntimeError:
@@ -790,7 +842,10 @@ def _resolve_prompt_input(value: str, *, option: str) -> str:
 
 
 def _resolve_append_system_prompts(values: tuple[str, ...] | list[str]) -> str | None:
-    """Resolve repeated append inputs in order and separate them by one blank line."""
+    """Resolve repeated append inputs in order and separate them by one blank line.
+
+    按顺序解析重复的追加输入，并用一个空行分隔。
+    """
     if not values:
         return None
     return "\n\n".join(
@@ -801,8 +856,13 @@ def _resolve_append_system_prompts(values: tuple[str, ...] | list[str]) -> str |
 def _merge_stdin_prompt(prompt: str) -> str:
     """Merge piped stdin content into a print-mode prompt, mirroring Pi.
 
+    仿照 Pi，将管道标准输入内容合并到打印模式提示词中。
+
     When stdin is not a terminal (e.g. `cat file | tau -p "..."`), its
     contents are prepended to the prompt text.
+
+    当标准输入不是终端时，例如 `cat file | tau -p "..."`，其内容会添加到
+    提示词文本之前。
     """
     stdin = sys.stdin
     if stdin is None:
@@ -824,6 +884,10 @@ def _merge_stdin_prompt(prompt: str) -> str:
 
 
 def _parse_export_cli_args(args: list[str]) -> tuple[str, Path | None, str | None]:
+    """Parse export arguments into source, destination, and format.
+
+    将导出参数解析为来源、目标路径和格式。
+    """
     if not args:
         raise RuntimeError("Usage: tau export <session-id-or-jsonl> [--format html|jsonl] [output]")
     session_ref = args[0]
@@ -859,6 +923,10 @@ def _resolve_export_destination(
     session_path: Path,
     format: str,
 ) -> Path:
+    """Resolve the final export path from explicit and inferred options.
+
+    根据显式和推断选项解析最终导出路径。
+    """
     if output_path is None:
         return default_session_export_artifact_path(
             session_path,
@@ -878,6 +946,10 @@ def _resolve_export_source(
     session_ref: str,
     session_manager: SessionManager | None = None,
 ) -> tuple[Path, str]:
+    """Resolve an export source as an indexed session or JSONL path.
+
+    将导出来源解析为已索引会话或 JSONL 路径。
+    """
     candidate_path = Path(session_ref).expanduser()
     if candidate_path.exists():
         if candidate_path.is_dir():
@@ -898,7 +970,10 @@ def render_provider_settings(
     *,
     credential_reader: CredentialReader | None = None,
 ) -> None:
-    """Render configured providers for the CLI."""
+    """Render configured providers for the CLI.
+
+    为命令行界面渲染已配置的提供者。
+    """
     for provider in settings.providers:
         marker = "*" if provider.name == settings.default_provider else " "
         models = ",".join(provider.models)
@@ -917,6 +992,10 @@ def _provider_credential_status(
     *,
     credential_reader: CredentialReader | None,
 ) -> str:
+    """Return a display status for one provider's available credentials.
+
+    返回一个提供者可用凭据的显示状态。
+    """
     if provider.credential_name and credential_reader is not None:
         if provider_kind(provider) == "openai-codex":
             get_oauth = getattr(credential_reader, "get_oauth", None)
@@ -943,7 +1022,10 @@ async def run_openai_rpc_mode(
     *,
     thinking_level_override: ThinkingLevel | None = None,
 ) -> None:
-    """Run a persistent Pi-compatible JSONL RPC session."""
+    """Run a persistent Pi-compatible JSONL RPC session.
+
+    运行持久的 Pi 兼容 JSONL RPC 会话。
+    """
     settings = load_provider_settings()
     shell_settings = load_shell_settings()
     manager = SessionManager()
@@ -968,6 +1050,9 @@ async def run_openai_rpc_mode(
             raise
         # Bootstrap with the static default; the staged loader discovers and
         # validates the requested/resumed live-only model before activating it.
+        #
+        # 使用静态默认值进行引导；暂存加载器会在激活请求或恢复的仅实时模型前，
+        # 先发现并验证该模型。
         selection = resolve_provider_selection(settings, provider_name="openai-codex")
     inference_provider = (
         record.inference_provider
@@ -1052,7 +1137,10 @@ async def run_openai_print_mode(
     *,
     thinking_level_override: ThinkingLevel | None = None,
 ) -> bool:
-    """Run a new or resumed print-mode turn using the configured provider."""
+    """Run a new or resumed print-mode turn using the configured provider.
+
+    使用已配置提供者运行新建或恢复的打印模式轮次。
+    """
     settings = load_provider_settings()
     shell_settings = load_shell_settings()
     manager = session_manager or SessionManager()
@@ -1088,6 +1176,9 @@ async def run_openai_print_mode(
     # Durable providers retain the established print-mode construction seam.
     # Dynamic providers are absent from ProviderSettings and therefore remain
     # None until CodingSession's trusted staged environment resolves them.
+    #
+    # 持久提供者保留既有的打印模式构造接口。动态提供者不存在于
+    # ProviderSettings 中，因此在 CodingSession 的可信暂存环境解析它们前保持 None。
     static_selection = selection
     if static_selection is None:
         try:
@@ -1178,6 +1269,9 @@ async def run_openai_print_mode(
         # This remains the ownership path for the compatibility provider
         # constructed by this legacy wrapper. Dynamic candidates are created
         # and owned inside the staged CodingSession instead.
+        #
+        # 这里仍是此旧版包装器构造的兼容提供者的所有权路径。动态候选项改由
+        # 暂存的 CodingSession 内部创建并拥有。
         if initial_provider is not None:
             await initial_provider.aclose()
 
@@ -1192,7 +1286,10 @@ def _print_session_record(
     model: str | None,
     session_id: str | None,
 ) -> CodingSessionRecord:
-    """Resolve a resumed transcript or exclusively create a new one."""
+    """Resolve a resumed transcript or exclusively create a new one.
+
+    解析恢复的会话记录文件，或以排他方式创建新文件。
+    """
     if resume_session_id is not None:
         record = manager.get_session(resume_session_id)
         if record is None:
@@ -1236,7 +1333,10 @@ def _create_print_session(
     inference_provider: str | None = None,
     session_id: str | None = None,
 ) -> CodingSessionRecord:
-    """Create an isolated print-mode session, refusing transcript collisions."""
+    """Create an isolated print-mode session, refusing transcript collisions.
+
+    创建隔离的打印模式会话，并拒绝会话记录文件冲突。
+    """
     return manager.create_session_exclusive(
         cwd=cwd,
         model=model,
@@ -1278,8 +1378,13 @@ async def run_print_mode(
 ) -> bool:
     """Run one non-interactive prompt and print streamed events.
 
+    运行一次非交互式提示词并打印流式事件。
+
     Returns False when the agent emits a non-recoverable error so CLI callers
     can fail non-interactive runs while still rendering the error message.
+
+    当代理发出不可恢复错误时返回 False，使命令行调用方能够在仍然渲染错误消息
+    的同时让非交互运行失败。
     """
     prepared = await prepare_coding_session(
         CodingSessionConfig(
@@ -1312,6 +1417,8 @@ async def run_print_mode(
     )
     # Informational print commands must not publish the staged initial
     # transcript; /system explicitly promises not to save anything.
+    #
+    # 信息型打印命令不能发布暂存的初始会话记录；/system 明确承诺不保存任何内容。
     if (stripped_prompt := prompt.strip()) == "/system" or stripped_prompt.startswith("/system "):
         command = prepared.session.handle_command(prompt)
         await prepared.abort()
@@ -1374,21 +1481,44 @@ async def run_print_mode(
 
 
 class _MemorySessionStorage:
-    """Append-only in-memory storage for direct print-mode tests."""
+    """Append-only in-memory storage for direct print-mode tests.
+
+    用于直接打印模式测试的仅追加内存存储。
+    """
 
     def __init__(self) -> None:
+        """Initialize empty append-only in-memory storage.
+
+        初始化空的仅追加内存存储。
+        """
         self.entries: list[SessionEntry] = []
 
     async def append(self, entry: SessionEntry) -> None:
+        """Append one session entry in memory.
+
+        在内存中追加一条会话条目。
+        """
         self.entries.append(entry)
 
     async def append_batch(self, entries: Sequence[SessionEntry]) -> None:
+        """Append a batch of session entries in order.
+
+        按顺序追加一批会话条目。
+        """
         self.entries.extend(entries)
 
     async def read_all(self) -> list[SessionEntry]:
+        """Return a copy of all in-memory session entries.
+
+        返回全部内存会话条目的副本。
+        """
         return list(self.entries)
 
 
 def _format_terminal_command_result(result: TerminalCommandResult) -> str:
+    """Format terminal command output and context status for print mode.
+
+    格式化终端命令输出和上下文状态以供打印模式使用。
+    """
     context_status = "added to context" if result.added_to_context else "not added to context"
     return f"$ {result.command}\n[{context_status}]\n{result.output}"

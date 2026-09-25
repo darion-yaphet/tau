@@ -1,4 +1,7 @@
-"""Project instruction discovery for Tau coding sessions."""
+"""Project instruction discovery for Tau coding sessions.
+
+为 Tau 编码会话发现项目指令。
+"""
 
 from __future__ import annotations
 
@@ -13,7 +16,10 @@ PROJECT_MARKERS = (".git", "pyproject.toml", "uv.lock", "setup.py", "package.jso
 def discover_project_context(
     paths: TauResourcePaths | None = None,
 ) -> tuple[ProjectContextFile, ...]:
-    """Discover project instruction files for system prompt context."""
+    """Discover project instruction files for system prompt context.
+
+    发现用于系统提示词上下文的项目指令文件。
+    """
     context_files, _diagnostics = discover_project_context_with_diagnostics(paths)
     return context_files
 
@@ -21,7 +27,10 @@ def discover_project_context(
 def discover_project_context_with_diagnostics(
     paths: TauResourcePaths | None = None,
 ) -> tuple[tuple[ProjectContextFile, ...], tuple[ResourceDiagnostic, ...]]:
-    """Discover project instruction files and return non-fatal diagnostics."""
+    """Discover project instruction files and return non-fatal diagnostics.
+
+    发现项目指令文件，并返回非致命诊断信息。
+    """
     resource_paths = paths or TauResourcePaths()
     context_files: list[ProjectContextFile] = []
     diagnostics: list[ResourceDiagnostic] = []
@@ -42,6 +51,10 @@ def discover_project_context_with_diagnostics(
 
 
 def _context_file_candidates(paths: TauResourcePaths) -> tuple[Path, ...]:
+    """Collect existing project instruction files in precedence order.
+
+    按优先顺序收集现有的项目指令文件。
+    """
     candidates: list[Path] = [paths.root / "AGENTS.md"]
     if paths.agents_root is not None:
         candidates.append(paths.agents_root / "AGENTS.md")
@@ -63,6 +76,10 @@ def _context_file_candidates(paths: TauResourcePaths) -> tuple[Path, ...]:
 
 
 def _find_project_root(cwd: Path) -> Path:
+    """Find the nearest ancestor containing a recognized project marker.
+
+    查找包含已识别项目标记的最近祖先目录。
+    """
     for path in (cwd, *cwd.parents):
         if any((path / marker).exists() for marker in PROJECT_MARKERS):
             return path
@@ -70,6 +87,10 @@ def _find_project_root(cwd: Path) -> Path:
 
 
 def _ancestor_agents_files(project_root: Path, cwd: Path) -> list[Path]:
+    """Return AGENTS.md candidates from the project root through the cwd.
+
+    返回从项目根目录到当前目录沿途的 AGENTS.md 候选文件。
+    """
     try:
         relative = cwd.relative_to(project_root)
     except ValueError:
@@ -84,6 +105,10 @@ def _ancestor_agents_files(project_root: Path, cwd: Path) -> list[Path]:
 
 
 def _dedupe_resolved_paths(paths: list[Path]) -> list[Path]:
+    """Resolve and de-duplicate paths while preserving their order.
+
+    解析路径并去重，同时保留原有顺序。
+    """
     seen: set[Path] = set()
     deduped: list[Path] = []
     for path in paths:

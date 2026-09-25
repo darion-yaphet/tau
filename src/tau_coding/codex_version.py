@@ -1,4 +1,7 @@
-"""Runtime resolution and caching of the latest released Codex client version."""
+"""Runtime resolution and caching of the latest released Codex client version.
+
+在运行时解析并缓存最新发布的 Codex 客户端版本。
+"""
 
 from __future__ import annotations
 
@@ -25,7 +28,10 @@ _VERSION_PATTERN = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
 
 class CodexClientVersionResolver:
-    """Resolve a real released Codex version, retaining safe cached fallbacks."""
+    """Resolve a real released Codex version, retaining safe cached fallbacks.
+
+    解析真实发布的 Codex 版本，并保留安全的缓存回退值。
+    """
 
     def __init__(
         self,
@@ -34,12 +40,19 @@ class CodexClientVersionResolver:
         client: httpx.AsyncClient | None = None,
         now: Callable[[], float] = time.time,
     ) -> None:
+        """Configure version lookup paths, HTTP client, and clock.
+
+        配置版本查询路径、HTTP 客户端和时钟。
+        """
         self._paths = paths or TauPaths()
         self._client = client
         self._now = now
 
     async def __call__(self) -> str:
-        """Return the latest known stable Codex version without making discovery fatal."""
+        """Return the latest known stable Codex version without making discovery fatal.
+
+        返回最新已知稳定 Codex 版本，并确保发现失败不会成为致命错误。
+        """
         cache = _read_cache(self._paths.codex_version_store_path)
         if environ.get("TAU_OFFLINE") is not None:
             return _latest_known_version(_cached_version(cache))
@@ -81,6 +94,10 @@ class CodexClientVersionResolver:
 
 
 def _parse_version(payload: object) -> str:
+    """Extract and validate a stable semantic version from package metadata.
+
+    从包元数据中提取并校验稳定语义版本。
+    """
     if not isinstance(payload, dict):
         raise ValueError("Codex package metadata must be an object")
     version = payload.get("version")
@@ -90,6 +107,10 @@ def _parse_version(payload: object) -> str:
 
 
 def _read_cache(path: Path) -> dict[str, Any] | None:
+    """Read a valid Codex version cache document when available.
+
+    在可用时读取有效的 Codex 版本缓存文档。
+    """
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
         if (
@@ -107,21 +128,37 @@ def _read_cache(path: Path) -> dict[str, Any] | None:
 
 
 def _cached_version(cache: dict[str, Any] | None) -> str | None:
+    """Return the version stored in a cache document.
+
+    返回缓存文档中存储的版本。
+    """
     return cache["version"] if cache is not None else None
 
 
 def _latest_known_version(candidate: str | None) -> str:
+    """Choose the newest version between a candidate and the bundled fallback.
+
+    在候选版本与内置回退版本之间选择较新的版本。
+    """
     if candidate is None:
         return DEFAULT_OPENAI_CODEX_CLIENT_VERSION
     return max(candidate, DEFAULT_OPENAI_CODEX_CLIENT_VERSION, key=_version_key)
 
 
 def _version_key(version: str) -> tuple[int, int, int]:
+    """Convert a semantic version into a tuple suitable for ordering.
+
+    将语义版本转换为可排序的元组。
+    """
     major, minor, patch = version.split(".")
     return int(major), int(minor), int(patch)
 
 
 def _try_write_cache(path: Path, value: dict[str, Any]) -> None:
+    """Best-effort write a version cache through an atomic replacement.
+
+    尽力通过原子替换写入版本缓存。
+    """
     with suppress(OSError):
         path.parent.mkdir(parents=True, exist_ok=True)
         temp_path: Path | None = None

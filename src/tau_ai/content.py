@@ -1,4 +1,7 @@
-"""Shared helpers for provider serialization of multimodal message content."""
+"""Shared helpers for provider serialization of multimodal message content.
+
+为模型提供者序列化多模态消息内容提供的共享辅助函数。
+"""
 
 from __future__ import annotations
 
@@ -17,7 +20,10 @@ NON_VISION_TOOL_IMAGE_PLACEHOLDER = (
 
 
 def messages_have_images(messages: Sequence[object]) -> bool:
-    """Return whether user or tool-result context contains image blocks."""
+    """Return whether user or tool-result context contains image blocks.
+
+    返回用户或工具结果上下文中是否包含图像块。
+    """
     return any(
         isinstance(message, (UserMessage, ToolResultMessage))
         and not isinstance(message.content, str)
@@ -32,7 +38,10 @@ def text_and_images(
     supports_images: bool,
     image_placeholder: str,
 ) -> tuple[str, list[ImageContent]]:
-    """Return visible text and sendable images, downgrading unsupported images."""
+    """Return visible text and sendable images, downgrading unsupported images.
+
+    返回可见文本与可发送的图像；不支持的图像会降级为占位文本。
+    """
     if isinstance(content, str):
         return content, []
 
