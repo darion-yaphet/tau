@@ -216,6 +216,8 @@ def main(
         list[str] | None,
         typer.Argument(help="Initial prompt to run in interactive TUI mode."),
     ] = None,
+
+    # 打印模式
     print_mode: Annotated[
         bool,
         typer.Option(
@@ -224,6 +226,8 @@ def main(
             help="Run the positional prompt in non-interactive print mode.",
         ),
     ] = False,
+
+    # 交互模式
     prompt_option: Annotated[
         str | None,
         typer.Option(
@@ -232,14 +236,20 @@ def main(
             hidden=True,
         ),
     ] = None,
+
+    # 提供者
     provider: Annotated[
         str | None,
         typer.Option("--provider", help="Configured provider name to use."),
     ] = None,
+
+    # 模型
     model: Annotated[
         str | None,
         typer.Option("--model", "-m", help="Model name to request from the provider."),
     ] = None,
+
+    # 思考
     thinking: Annotated[
         str | None,
         typer.Option(
@@ -252,14 +262,20 @@ def main(
             ),
         ),
     ] = None,
+
+    # 设置 base_url
     setup_base_url: Annotated[
         str,
         typer.Option("--base-url", help="OpenAI-compatible base URL for `tau setup`."),
     ] = DEFAULT_OPENAI_COMPATIBLE_BASE_URL,
+
+    # 设置 api_key_env
     setup_api_key_env: Annotated[
         str,
         typer.Option("--api-key-env", help="API key environment variable for `tau setup`."),
     ] = "OPENAI_API_KEY",
+
+    # 设置 timeout_seconds
     setup_timeout_seconds: Annotated[
         float,
         typer.Option(
@@ -267,10 +283,14 @@ def main(
             help="HTTP timeout in seconds for `tau setup` provider requests.",
         ),
     ] = DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS,
+
+    # 设置 max_retries
     setup_max_retries: Annotated[
         int,
         typer.Option("--max-retries", help="Provider retry count for `tau setup`."),
     ] = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRIES,
+
+    # 设置 max_retry_delay_seconds
     setup_max_retry_delay_seconds: Annotated[
         float,
         typer.Option(
@@ -278,14 +298,20 @@ def main(
             help="Provider retry delay in seconds for `tau setup`.",
         ),
     ] = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS,
+
+    # 设置 set_default
     setup_default: Annotated[
         bool,
         typer.Option("--set-default/--no-set-default", help="Make setup provider the default."),
     ] = True,
+
+    # 设置 cwd
     cwd: Annotated[
         Path | None,
         typer.Option("--cwd", help="Working directory for built-in coding tools."),
     ] = None,
+
+    # 设置 mode
     mode: Annotated[
         PrintOutputMode | None,
         typer.Option(
@@ -293,6 +319,8 @@ def main(
             help="Run headlessly with this output format (text, json, transcript, or rpc).",
         ),
     ] = None,
+
+    # 设置 output
     output: Annotated[
         PrintOutputMode | None,
         typer.Option(
@@ -302,10 +330,14 @@ def main(
             hidden=True,
         ),
     ] = None,
+
+    # 设置 session
     session: Annotated[
         str | None,
         typer.Option("--session", help="Resume a session id in TUI or print mode."),
     ] = None,
+
+    # 设置 resume
     resume: Annotated[
         str | None,
         typer.Option(
@@ -314,10 +346,14 @@ def main(
             hidden=True,
         ),
     ] = None,
+
+    # 设置 new_session
     new_session: Annotated[
         bool,
         typer.Option("--new-session", help="Create a new session in TUI mode (default)."),
     ] = False,
+
+    # 设置 session_id
     session_id: Annotated[
         str | None,
         typer.Option(
@@ -325,6 +361,8 @@ def main(
             help="Set the exact id for the newly created print-mode session.",
         ),
     ] = None,
+
+    # 设置 system_prompt
     system_prompt: Annotated[
         str | None,
         typer.Option(
@@ -333,6 +371,8 @@ def main(
             help="Replace the default system-prompt base with literal text or a UTF-8 file.",
         ),
     ] = None,
+
+    # 设置 append_system_prompt
     append_system_prompt: Annotated[
         list[str] | None,
         typer.Option(
@@ -341,6 +381,8 @@ def main(
             help="Append literal text or a UTF-8 file to the system prompt (repeatable).",
         ),
     ] = None,
+
+    # 设置 auto_compact_threshold
     auto_compact_threshold: Annotated[
         int | None,
         typer.Option(
@@ -348,6 +390,8 @@ def main(
             help="Automatically compact TUI context above this rough token estimate.",
         ),
     ] = None,
+
+    # 设置 extension
     extension: Annotated[
         list[Path] | None,
         typer.Option(
@@ -356,6 +400,8 @@ def main(
             help="Load an extension file or directory (repeatable).",
         ),
     ] = None,
+
+    # 设置 extension_legacy
     extension_legacy: Annotated[
         list[Path] | None,
         typer.Option(
@@ -364,6 +410,8 @@ def main(
             hidden=True,
         ),
     ] = None,
+
+    # 设置 export
     export: Annotated[
         bool,
         typer.Option(
@@ -371,6 +419,8 @@ def main(
             help="Export the given session id or JSONL path (mirrors `tau export`).",
         ),
     ] = False,
+
+    # 设置 no_extensions
     no_extensions: Annotated[
         bool,
         typer.Option(
@@ -378,6 +428,8 @@ def main(
             help="Disable extension directory discovery (explicit -e paths still load).",
         ),
     ] = False,
+
+    # 设置 project_extensions
     project_extensions: Annotated[
         bool,
         typer.Option(
@@ -385,18 +437,26 @@ def main(
             help="Also load trusted project .tau/extensions (additional code opt-in).",
         ),
     ] = False,
+
+    # 设置 approve
     approve: Annotated[
         bool,
         typer.Option("--approve", "-a", help="Trust protected project inputs for this run."),
     ] = False,
+
+    # 设置 no_approve
     no_approve: Annotated[
         bool,
         typer.Option("--no-approve", "-na", help="Decline protected project inputs for this run."),
     ] = False,
+
+    # 设置 version
     version: Annotated[
         bool,
         typer.Option("--version", "-v", help="Show Tau's version and exit."),
     ] = False,
+
+    # 设置 models
     models: Annotated[
         bool,
         typer.Option("--models", help="With `tau update`, refresh model catalogs only."),
@@ -430,6 +490,7 @@ def main(
             f"--resume was renamed to --session. Use `tau --session {resume}` instead."
         )
 
+    # 设置 session 和 new_session 不能一起使用
     if session is not None and new_session:
         raise typer.BadParameter("--session and --new-session cannot be used together")
     if session is not None and session_id is not None:
@@ -460,6 +521,7 @@ def main(
     print_requested = print_mode or (mode is not None and not rpc_requested)
     effective_output = mode or PrintOutputMode.text
 
+    # 设置 session_id
     if session_id is not None:
         if not print_requested:
             raise typer.BadParameter("--session-id is only supported in print mode")
@@ -468,6 +530,7 @@ def main(
         except ValueError as exc:
             raise typer.BadParameter(str(exc)) from exc
 
+    # 设置 positional_args
     positional_args = prompt_args or []
     command = positional_args[0] if positional_args else None
     initial_prompt = " ".join(positional_args) if positional_args else None
